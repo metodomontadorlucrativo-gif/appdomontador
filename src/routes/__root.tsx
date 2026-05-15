@@ -79,7 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Controle gastos, faturamento e produtividade com gamificação. App para montadores, eletricistas, encanadores e profissionais autônomos. Suba de nível, desbloqueie conquistas e veja seu lucro real em tempo real.",
       },
       { name: "theme-color", content: "#F59E0B" },
-      { property: "og:title", content: "TRENA — Sua trena financeira" },
+      { property: "og:title", content: "TRENA — Controle financeiro gamificado para autônomos" },
       {
         property: "og:description",
         content:
@@ -87,6 +87,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "TRENA — Controle financeiro gamificado para autônomos" },
+      { name: "description", content: "TRENA is a gamified microSaaS for freelancers to track expenses, revenue, and productivity." },
+      { property: "og:description", content: "TRENA is a gamified microSaaS for freelancers to track expenses, revenue, and productivity." },
+      { name: "twitter:description", content: "TRENA is a gamified microSaaS for freelancers to track expenses, revenue, and productivity." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7b04f66f-f8d0-4b06-986f-3024595d4224/id-preview-43be2383--019034f5-c585-4f4d-80d6-6440aad5a39b.lovable.app-1778721564565.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7b04f66f-f8d0-4b06-986f-3024595d4224/id-preview-43be2383--019034f5-c585-4f4d-80d6-6440aad5a39b.lovable.app-1778721564565.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
