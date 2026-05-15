@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 
 import { Logo } from "./index";
 import { toast } from "sonner";
@@ -42,11 +43,12 @@ function SignupPage() {
   }
 
   async function handleGoogle() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin + "/app" },
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin + "/app",
     });
-    if (error) toast.error("Falha ao entrar com Google");
+    if (result.error) toast.error("Falha ao entrar com Google");
+    if (result.redirected) return;
+    if (!result.error) navigate({ to: "/app" });
   }
 
   return (
