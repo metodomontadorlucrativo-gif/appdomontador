@@ -11,7 +11,24 @@ import {
   CheckCircle2,
   LogIn,
   LogOut,
+  Target,
+  Calendar as CalendarIcon,
+  Pencil,
 } from "lucide-react";
+import {
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  isWithinInterval,
+  addWeeks,
+  format,
+  parseISO,
+  isSameDay,
+  eachDayOfInterval,
+  getDay,
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -30,6 +47,8 @@ export const Route = createFileRoute("/app")({
 
 /* ----------------------------- Types & storage ---------------------------- */
 
+type ServicePeriod = "day" | "week" | "month";
+
 type Service = {
   id: string;
   client_name: string;
@@ -37,6 +56,10 @@ type Service = {
   agreed_price: number;
   received_price: number | null;
   status: "scheduled" | "in_progress" | "completed" | "cancelled";
+  /** ISO yyyy-MM-dd — data do serviço */
+  date: string;
+  /** balde de cobrança usado na projeção */
+  period: ServicePeriod;
   scheduled_at: string | null;
   created_at: string;
 };
@@ -50,8 +73,11 @@ type Expense = {
   created_at: string;
 };
 
+type Goals = { weekly: number; monthly: number };
+
 const SERVICES_KEY = "trena.services.v1";
 const EXPENSES_KEY = "trena.expenses.v1";
+const GOALS_KEY = "trena.goals.v1";
 
 function loadLS<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -71,6 +97,28 @@ const uid = () =>
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
 
+const todayISO = () => format(new Date(), "yyyy-MM-dd");
+
+const PERIOD_LABEL: Record<ServicePeriod, string> = {
+  day: "Dia",
+  week: "Semana",
+  month: "Mês",
+};
+
+/** Garante data válida em serviços legados. */
+function serviceDate(s: Service): Date {
+  const d = s.date ?? s.scheduled_at ?? s.created_at;
+  try {
+    return typeof d === "string" && d.length === 10 ? parseISO(d) : new Date(d);
+  } catch {
+    return new Date(s.created_at);
+  }
+}
+
+function servicePrice(s: Service): number {
+  return Number(s.received_price ?? s.agreed_price ?? 0);
+}
+
 /* --------------------------------- Page ---------------------------------- */
 
 type Tab = "dashboard" | "services" | "expenses";
@@ -81,11 +129,20 @@ function AppDashboard() {
   const [tab, setTab] = useState<Tab>("dashboard");
   const [services, setServices] = useState<Service[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [goals, setGoals] = useState<Goals>({ weekly: 0, monthly: 0 });
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setServices(loadLS<Service[]>(SERVICES_KEY, []));
+    const raw = loadLS<Service[]>(SERVICES_KEY, []);
+    // migrate legacy services without date/period
+    const migrated = raw.map((s) => ({
+      ...s,
+      date: s.date ?? (s.scheduled_at?.slice(0, 10) || s.created_at.slice(0, 10)),
+      period: s.period ?? "month",
+    }));
+    setServices(migrated);
     setExpenses(loadLS<Expense[]>(EXPENSES_KEY, []));
+    setGoals(loadLS<Goals>(GOALS_KEY, { weekly: 0, monthly: 0 }));
     setHydrated(true);
   }, []);
 
@@ -95,6 +152,9 @@ function AppDashboard() {
   useEffect(() => {
     if (hydrated) saveLS(EXPENSES_KEY, expenses);
   }, [expenses, hydrated]);
+  useEffect(() => {
+    if (hydrated) saveLS(GOALS_KEY, goals);
+  }, [goals, hydrated]);
 
   return (
     <div className="min-h-screen bg-secondary/30 pb-24">
@@ -142,7 +202,14 @@ function AppDashboard() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        {tab === "dashboard" && <DashboardTab services={services} expenses={expenses} />}
+        {tab === "dashboard" && (
+          <DashboardTab
+            services={services}
+            expenses={expenses}
+            goals={goals}
+            setGoals={setGoals}
+          />
+        )}
         {tab === "services" && (
           <ServicesTab services={services} setServices={setServices} />
         )}
@@ -181,109 +248,404 @@ function TabButton({
 
 /* ------------------------------- Dashboard ------------------------------- */
 
-function DashboardTab({ services, expenses }: { services: Service[]; expenses: Expense[] }) {
+function DashboardTab({
+  services,
+  expenses,
+  goals,
+  setGoals,
+}: {
+  services: Service[];
+  expenses: Expense[];
+  goals: Goals;
+  setGoals: React.Dispatch<React.SetStateAction<Goals>>;
+}) {
+  const [editGoals, setEditGoals] = useState(false);
+
+  const now = new Date();
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+  const monthStart = startOfMonth(now);
+  const monthEnd = endOfMonth(now);
+
   const m = useMemo(() => {
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const inWeek = (s: Service) =>
+      isWithinInterval(serviceDate(s), { start: weekStart, end: weekEnd });
+    const inMonth = (s: Service) =>
+      isWithinInterval(serviceDate(s), { start: monthStart, end: monthEnd });
 
-    const completedThisMonth = services.filter(
-      (s) => s.status === "completed" && new Date(s.created_at) >= monthStart,
-    );
-    const expensesThisMonth = expenses.filter(
-      (e) => new Date(e.occurred_at) >= monthStart,
-    );
+    const realizedWeek = services
+      .filter((s) => inWeek(s) && s.status === "completed")
+      .reduce((a, s) => a + servicePrice(s), 0);
+    const scheduledWeek = services
+      .filter((s) => inWeek(s) && s.status === "scheduled")
+      .reduce((a, s) => a + servicePrice(s), 0);
 
-    const revenue = completedThisMonth.reduce(
-      (sum, s) => sum + Number(s.received_price ?? s.agreed_price ?? 0),
-      0,
-    );
-    const totalExpenses = expensesThisMonth.reduce((sum, e) => sum + Number(e.amount ?? 0), 0);
-    const profit = revenue - totalExpenses;
-    const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+    const realizedMonth = services
+      .filter((s) => inMonth(s) && s.status === "completed")
+      .reduce((a, s) => a + servicePrice(s), 0);
+    const scheduledMonth = services
+      .filter((s) => inMonth(s) && s.status === "scheduled")
+      .reduce((a, s) => a + servicePrice(s), 0);
 
-    const byCategory = new Map<string, number>();
-    for (const e of expensesThisMonth) {
-      byCategory.set(e.category, (byCategory.get(e.category) ?? 0) + Number(e.amount));
-    }
+    const expensesMonth = expenses
+      .filter((e) => isWithinInterval(parseISO(e.occurred_at), { start: monthStart, end: monthEnd }))
+      .reduce((a, e) => a + Number(e.amount), 0);
+
+    const profit = realizedMonth - expensesMonth;
+    const margin = realizedMonth > 0 ? (profit / realizedMonth) * 100 : 0;
 
     return {
-      revenue,
-      expenses: totalExpenses,
+      realizedWeek,
+      projectedWeek: realizedWeek + scheduledWeek,
+      scheduledWeek,
+      realizedMonth,
+      projectedMonth: realizedMonth + scheduledMonth,
+      scheduledMonth,
+      expensesMonth,
       profit,
       margin,
-      servicesCompleted: completedThisMonth.length,
-      pendingServices: services.filter((s) => s.status !== "completed" && s.status !== "cancelled")
-        .length,
-      byCategory: Array.from(byCategory.entries()).sort((a, b) => b[1] - a[1]),
     };
-  }, [services, expenses]);
+  }, [services, expenses, weekStart.getTime(), weekEnd.getTime(), monthStart.getTime(), monthEnd.getTime()]);
+
+  // Últimas 4 semanas (incluindo a atual)
+  const weeklySeries = useMemo(() => {
+    const weeks: { label: string; realized: number; projected: number }[] = [];
+    for (let i = 3; i >= 0; i--) {
+      const ref = addWeeks(now, -i);
+      const ws = startOfWeek(ref, { weekStartsOn: 1 });
+      const we = endOfWeek(ref, { weekStartsOn: 1 });
+      const inRange = (s: Service) =>
+        isWithinInterval(serviceDate(s), { start: ws, end: we });
+      const realized = services
+        .filter((s) => inRange(s) && s.status === "completed")
+        .reduce((a, s) => a + servicePrice(s), 0);
+      const scheduled = services
+        .filter((s) => inRange(s) && s.status === "scheduled")
+        .reduce((a, s) => a + servicePrice(s), 0);
+      weeks.push({
+        label: i === 0 ? "Esta sem." : `${format(ws, "dd/MM")}`,
+        realized,
+        projected: realized + scheduled,
+      });
+    }
+    return weeks;
+  }, [services]);
+
+  const maxWeekly = Math.max(1, ...weeklySeries.map((w) => Math.max(w.projected, goals.weekly)));
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold sm:text-3xl">Visão geral do mês</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Métricas calculadas a partir dos serviços concluídos e despesas registradas.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold sm:text-3xl">Visão geral</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Realizado vs projetado, baseado nos serviços agendados e concluídos.
+          </p>
+        </div>
+        <button
+          onClick={() => setEditGoals(true)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold hover:bg-muted"
+        >
+          <Pencil className="size-3.5" /> Editar metas
+        </button>
       </div>
 
+      {/* GOALS PROGRESS */}
+      <div className="grid gap-3 lg:grid-cols-2">
+        <GoalProgress
+          title="Meta semanal"
+          icon={<Target className="size-4" />}
+          goal={goals.weekly}
+          realized={m.realizedWeek}
+          projected={m.projectedWeek}
+          subtitle={`${format(weekStart, "dd/MM", { locale: ptBR })} – ${format(weekEnd, "dd/MM", { locale: ptBR })}`}
+          onSet={() => setEditGoals(true)}
+        />
+        <GoalProgress
+          title="Meta mensal"
+          icon={<Target className="size-4" />}
+          goal={goals.monthly}
+          realized={m.realizedMonth}
+          projected={m.projectedMonth}
+          subtitle={format(now, "MMMM 'de' yyyy", { locale: ptBR })}
+          onSet={() => setEditGoals(true)}
+        />
+      </div>
+
+      {/* METRICS */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <MetricCard label="Faturamento" value={formatBRL(m.revenue)} icon={TrendingUp} tone="default" />
-        <MetricCard label="Despesas" value={formatBRL(m.expenses)} icon={Wallet} tone="destructive" />
+        <MetricCard label="Realizado (mês)" value={formatBRL(m.realizedMonth)} icon={TrendingUp} tone="success" />
+        <MetricCard label="Projetado (mês)" value={formatBRL(m.projectedMonth)} icon={BarChart3} tone="brand" />
+        <MetricCard label="Despesas (mês)" value={formatBRL(m.expensesMonth)} icon={Wallet} tone="destructive" />
         <MetricCard
-          label="Lucro"
-          value={formatBRL(m.profit)}
-          icon={BarChart3}
+          label="Lucro / margem"
+          value={`${formatBRL(m.profit)} · ${m.margin.toFixed(0)}%`}
+          icon={CheckCircle2}
           tone={m.profit >= 0 ? "success" : "destructive"}
         />
-        <MetricCard
-          label="Margem"
-          value={`${m.margin.toFixed(0)}%`}
-          icon={CheckCircle2}
-          tone="brand"
-        />
       </div>
 
+      {/* WEEKLY CHART + CALENDAR */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Resumo de operações">
-          <div className="grid grid-cols-2 gap-4">
-            <Stat label="Serviços concluídos" value={String(m.servicesCompleted)} />
-            <Stat label="Em aberto" value={String(m.pendingServices)} />
-            <Stat label="Despesas registradas" value={String(expenses.length)} />
-            <Stat label="Total de serviços" value={String(services.length)} />
+        <Panel title="Últimas 4 semanas">
+          <div className="flex h-48 items-end gap-3">
+            {weeklySeries.map((w, i) => {
+              const realPct = (w.realized / maxWeekly) * 100;
+              const projPct = (w.projected / maxWeekly) * 100;
+              const goalPct = goals.weekly > 0 ? (goals.weekly / maxWeekly) * 100 : 0;
+              return (
+                <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+                  <div className="text-[10px] font-bold text-muted-foreground">
+                    {formatBRL(w.realized).replace("R$", "").trim()}
+                  </div>
+                  <div className="relative flex h-full w-full items-end overflow-hidden rounded-t-lg bg-muted/50">
+                    {goalPct > 0 && (
+                      <div
+                        className="absolute inset-x-0 z-10 border-t-2 border-dashed border-brand/70"
+                        style={{ bottom: `${goalPct}%` }}
+                      />
+                    )}
+                    <div
+                      className="absolute inset-x-0 bottom-0 bg-brand/25"
+                      style={{ height: `${projPct}%` }}
+                    />
+                    <div
+                      className="absolute inset-x-0 bottom-0 bg-success"
+                      style={{ height: `${realPct}%` }}
+                    />
+                  </div>
+                  <div className="text-[10px] font-semibold text-muted-foreground">{w.label}</div>
+                </div>
+              );
+            })}
           </div>
+          <Legend />
         </Panel>
 
-        <Panel title="Despesas por categoria (mês)">
-          {m.byCategory.length === 0 ? (
-            <EmptyHint>Nenhuma despesa registrada neste mês.</EmptyHint>
-          ) : (
-            <ul className="space-y-2">
-              {m.byCategory.map(([cat, amt]) => {
-                const meta = categoryMeta(cat);
-                const pct = m.expenses > 0 ? (amt / m.expenses) * 100 : 0;
-                return (
-                  <li key={cat} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 font-medium">
-                        <span>{meta.icon}</span> {meta.label}
-                      </span>
-                      <span className="font-semibold">{formatBRL(amt)}</span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${pct}%`, background: meta.color }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+        <Panel title={`Calendário · ${format(now, "MMMM", { locale: ptBR })}`}>
+          <MiniCalendar services={services} monthStart={monthStart} monthEnd={monthEnd} />
         </Panel>
+      </div>
+
+      {editGoals && (
+        <GoalsForm initial={goals} onClose={() => setEditGoals(false)} onSave={setGoals} />
+      )}
+    </div>
+  );
+}
+
+function GoalProgress({
+  title,
+  icon,
+  goal,
+  realized,
+  projected,
+  subtitle,
+  onSet,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  goal: number;
+  realized: number;
+  projected: number;
+  subtitle: string;
+  onSet: () => void;
+}) {
+  const hasGoal = goal > 0;
+  const realPct = hasGoal ? Math.min(100, (realized / goal) * 100) : 0;
+  const projPct = hasGoal ? Math.min(100, (projected / goal) * 100) : 0;
+  const remaining = Math.max(0, goal - realized);
+  const fromScheduled = Math.max(0, projected - realized);
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-bold">
+            {icon} {title}
+          </div>
+          <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Meta</div>
+          <div className="font-display text-lg font-bold">{hasGoal ? formatBRL(goal) : "—"}</div>
+        </div>
+      </div>
+
+      {!hasGoal ? (
+        <button
+          onClick={onSet}
+          className="mt-4 w-full rounded-xl border border-dashed border-border bg-muted/30 p-4 text-sm font-semibold text-muted-foreground hover:bg-muted"
+        >
+          Defina sua meta para acompanhar o progresso →
+        </button>
+      ) : (
+        <>
+          <div className="mt-4 relative h-3 overflow-hidden rounded-full bg-muted">
+            <div className="absolute inset-y-0 left-0 bg-brand/25" style={{ width: `${projPct}%` }} />
+            <div className="absolute inset-y-0 left-0 bg-success" style={{ width: `${realPct}%` }} />
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+            <div>
+              <div className="text-muted-foreground">Realizado</div>
+              <div className="font-display text-sm font-bold text-success">{formatBRL(realized)}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Projetado</div>
+              <div className="font-display text-sm font-bold text-brand-dark">{formatBRL(projected)}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Faltam</div>
+              <div className="font-display text-sm font-bold">{formatBRL(remaining)}</div>
+            </div>
+          </div>
+          {fromScheduled > 0 && (
+            <div className="mt-2 text-[11px] text-muted-foreground">
+              {formatBRL(fromScheduled)} já agendados aguardando conclusão.
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function Legend() {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block size-3 rounded-sm bg-success" /> Realizado
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block size-3 rounded-sm bg-brand/25" /> Projetado
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block h-0 w-3 border-t-2 border-dashed border-brand/70" /> Meta
+      </span>
+    </div>
+  );
+}
+
+function MiniCalendar({
+  services,
+  monthStart,
+  monthEnd,
+}: {
+  services: Service[];
+  monthStart: Date;
+  monthEnd: Date;
+}) {
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const leadingBlanks = (getDay(monthStart) + 6) % 7; // segunda = 0
+  const cells: (Date | null)[] = [...Array(leadingBlanks).fill(null), ...days];
+
+  const byDay = useMemo(() => {
+    const map = new Map<string, { completed: number; scheduled: number; total: number }>();
+    for (const s of services) {
+      const d = format(serviceDate(s), "yyyy-MM-dd");
+      const cur = map.get(d) ?? { completed: 0, scheduled: 0, total: 0 };
+      const price = servicePrice(s);
+      if (s.status === "completed") cur.completed += price;
+      else if (s.status === "scheduled") cur.scheduled += price;
+      cur.total += price;
+      map.set(d, cur);
+    }
+    return map;
+  }, [services]);
+
+  const weekdays = ["S", "T", "Q", "Q", "S", "S", "D"];
+  const today = new Date();
+
+  return (
+    <div>
+      <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-muted-foreground">
+        {weekdays.map((w, i) => (
+          <div key={i}>{w}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((d, i) => {
+          if (!d) return <div key={i} />;
+          const key = format(d, "yyyy-MM-dd");
+          const info = byDay.get(key);
+          const isToday = isSameDay(d, today);
+          return (
+            <div
+              key={i}
+              title={
+                info
+                  ? `${format(d, "dd/MM")} · ${formatBRL(info.total)}`
+                  : format(d, "dd/MM")
+              }
+              className={`relative aspect-square rounded-md p-1 text-[11px] ${
+                isToday ? "bg-brand/15 ring-1 ring-brand" : "bg-muted/30"
+              }`}
+            >
+              <div className="font-semibold">{format(d, "d")}</div>
+              {info && (
+                <div className="absolute bottom-1 left-1 right-1 flex justify-end gap-0.5">
+                  {info.completed > 0 && (
+                    <span className="inline-block size-1.5 rounded-full bg-success" />
+                  )}
+                  {info.scheduled > 0 && (
+                    <span className="inline-block size-1.5 rounded-full bg-brand" />
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
+  );
+}
+
+function GoalsForm({
+  initial,
+  onClose,
+  onSave,
+}: {
+  initial: Goals;
+  onClose: () => void;
+  onSave: (g: Goals) => void;
+}) {
+  const [weekly, setWeekly] = useState(String(initial.weekly || ""));
+  const [monthly, setMonthly] = useState(String(initial.monthly || ""));
+  return (
+    <Modal onClose={onClose} title="Suas metas de ganho">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave({ weekly: Number(weekly) || 0, monthly: Number(monthly) || 0 });
+          onClose();
+        }}
+        className="space-y-4"
+      >
+        <Field label="Meta semanal (R$)">
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            value={weekly}
+            onChange={(e) => setWeekly(e.target.value)}
+            placeholder="2500"
+            className="input"
+          />
+        </Field>
+        <Field label="Meta mensal (R$)">
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            value={monthly}
+            onChange={(e) => setMonthly(e.target.value)}
+            placeholder="10000"
+            className="input"
+          />
+        </Field>
+        <FormActions onCancel={onClose} />
+      </form>
+    </Modal>
   );
 }
 
@@ -314,20 +676,9 @@ function MetricCard({
         </span>
         <Icon className={`size-4 ${toneClass}`} />
       </div>
-      <div className={`mt-2 font-display text-xl font-bold leading-tight sm:text-2xl ${toneClass}`}>
+      <div className={`mt-2 font-display text-lg font-bold leading-tight sm:text-xl ${toneClass}`}>
         {value}
       </div>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        {label}
-      </div>
-      <div className="mt-1 font-display text-2xl font-bold">{value}</div>
     </div>
   );
 }
@@ -351,6 +702,8 @@ function EmptyHint({ children }: { children: React.ReactNode }) {
 
 /* -------------------------------- Services -------------------------------- */
 
+type ServiceFilter = "week" | "month" | "all";
+
 function ServicesTab({
   services,
   setServices,
@@ -359,6 +712,19 @@ function ServicesTab({
   setServices: React.Dispatch<React.SetStateAction<Service[]>>;
 }) {
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<ServiceFilter>("all");
+
+  const now = new Date();
+  const range =
+    filter === "week"
+      ? { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) }
+      : filter === "month"
+        ? { start: startOfMonth(now), end: endOfMonth(now) }
+        : null;
+
+  const filtered = services.filter((s) =>
+    range ? isWithinInterval(serviceDate(s), range) : true,
+  );
 
   return (
     <div className="space-y-4">
@@ -366,7 +732,7 @@ function ServicesTab({
         <div>
           <h1 className="font-display text-2xl font-bold sm:text-3xl">Serviços</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Cadastre cada montagem ou trabalho. Conclua para gerar faturamento.
+            Cadastre cada montagem com data e período. Conclua para virar faturamento.
           </p>
         </div>
         <button
@@ -377,15 +743,29 @@ function ServicesTab({
         </button>
       </div>
 
-      {services.length === 0 ? (
+      <div className="flex gap-1 rounded-full border border-border bg-card p-1 text-xs font-semibold">
+        {(["week", "month", "all"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`flex-1 rounded-full px-3 py-1.5 transition-colors ${
+              filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            {f === "week" ? "Esta semana" : f === "month" ? "Este mês" : "Todos"}
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
         <EmptyHint>
-          Nenhum serviço ainda. Clique em <strong>Novo</strong> para registrar o primeiro.
+          Nenhum serviço {filter !== "all" ? "no período" : "ainda"}. Clique em <strong>Novo</strong> para registrar.
         </EmptyHint>
       ) : (
         <ul className="space-y-2">
-          {services
+          {filtered
             .slice()
-            .sort((a, b) => b.created_at.localeCompare(a.created_at))
+            .sort((a, b) => serviceDate(a).getTime() - serviceDate(b).getTime())
             .map((s) => {
               const status = SERVICE_STATUSES.find((x) => x.value === s.status)!;
               return (
@@ -399,9 +779,19 @@ function ServicesTab({
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${status.color}`}>
                         {status.label}
                       </span>
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                        {PERIOD_LABEL[s.period]}
+                      </span>
                     </div>
-                    <div className="mt-1 text-sm text-muted-foreground">
-                      {s.service_type} · {formatBRL(Number(s.received_price ?? s.agreed_price))}
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <CalendarIcon className="size-3.5" />
+                        {format(serviceDate(s), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                      <span>·</span>
+                      <span>{s.service_type}</span>
+                      <span>·</span>
+                      <span className="font-semibold text-foreground">{formatBRL(servicePrice(s))}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -462,8 +852,10 @@ function ServiceForm({
   const [client, setClient] = useState("");
   const [type, setType] = useState("");
   const [price, setPrice] = useState("");
+  const [date, setDate] = useState(todayISO());
+  const [period, setPeriod] = useState<ServicePeriod>("month");
 
-  const valid = client.trim() && type.trim() && Number(price) > 0;
+  const valid = client.trim() && type.trim() && Number(price) > 0 && date;
 
   return (
     <Modal onClose={onClose} title="Novo serviço">
@@ -478,7 +870,9 @@ function ServiceForm({
             agreed_price: Number(price),
             received_price: null,
             status: "scheduled",
-            scheduled_at: null,
+            date,
+            period,
+            scheduled_at: new Date(date + "T08:00:00").toISOString(),
             created_at: new Date().toISOString(),
           });
         }}
@@ -500,6 +894,34 @@ function ServiceForm({
             className="input"
           />
         </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Data">
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="input"
+            />
+          </Field>
+          <Field label="Período de cobrança">
+            <div className="grid grid-cols-3 gap-1 rounded-md border border-border bg-card p-1 text-xs font-semibold">
+              {(["day", "week", "month"] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPeriod(p)}
+                  className={`rounded px-2 py-1.5 transition-colors ${
+                    period === p
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {PERIOD_LABEL[p]}
+                </button>
+              ))}
+            </div>
+          </Field>
+        </div>
         <Field label="Valor combinado (R$)">
           <input
             type="number"
@@ -610,7 +1032,7 @@ function ExpenseForm({
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState<ExpenseCategory>("combustivel");
   const [description, setDescription] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayISO());
 
   const valid = Number(amount) > 0;
 
