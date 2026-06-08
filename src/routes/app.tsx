@@ -1,5 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { getSubscription } from "@/lib/billing.functions";
+import { TrialBanner } from "@/components/TrialBanner";
 import {
   BarChart3,
   Briefcase,
@@ -132,6 +136,20 @@ function AppDashboard() {
   const [goals, setGoals] = useState<Goals>({ weekly: 0, monthly: 0 });
   const [hydrated, setHydrated] = useState(false);
 
+  const fetchSub = useServerFn(getSubscription);
+  const { data: sub } = useQuery({
+    queryKey: ["subscription"],
+    queryFn: () => fetchSub(),
+    enabled: !!user,
+  });
+
+  useEffect(() => {
+    if (sub?.trial_expired) {
+      navigate({ to: "/planos" });
+    }
+  }, [sub?.trial_expired, navigate]);
+
+
   useEffect(() => {
     const raw = loadLS<Service[]>(SERVICES_KEY, []);
     // migrate legacy services without date/period
@@ -169,15 +187,23 @@ function AppDashboard() {
               Modo demo
             </span>
             {user ? (
-              <button
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate({ to: "/" });
-                }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold hover:bg-muted"
-              >
-                <LogOut className="size-3.5" /> Sair
-              </button>
+              <>
+                <Link
+                  to="/assinatura"
+                  className="hidden items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold hover:bg-muted sm:inline-flex"
+                >
+                  Assinatura
+                </Link>
+                <button
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    navigate({ to: "/" });
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold hover:bg-muted"
+                >
+                  <LogOut className="size-3.5" /> Sair
+                </button>
+              </>
             ) : (
               <Link
                 to="/login"
@@ -200,6 +226,9 @@ function AppDashboard() {
           </TabButton>
         </nav>
       </header>
+
+      <TrialBanner sub={sub ?? null} />
+
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         {tab === "dashboard" && (

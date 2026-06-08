@@ -158,6 +158,7 @@ export type Database = {
       profiles: {
         Row: {
           business_name: string | null
+          cancel_requested_at: string | null
           created_at: string
           current_streak_days: number
           email: string | null
@@ -169,11 +170,16 @@ export type Database = {
           onboarding_completed: boolean
           plan: Database["public"]["Enums"]["app_plan"]
           profession_type: string | null
+          subscription_started_at: string | null
+          subscription_status: string
+          trial_ends_at: string | null
+          trial_started_at: string | null
           updated_at: string
           xp: number
         }
         Insert: {
           business_name?: string | null
+          cancel_requested_at?: string | null
           created_at?: string
           current_streak_days?: number
           email?: string | null
@@ -185,11 +191,16 @@ export type Database = {
           onboarding_completed?: boolean
           plan?: Database["public"]["Enums"]["app_plan"]
           profession_type?: string | null
+          subscription_started_at?: string | null
+          subscription_status?: string
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string
           xp?: number
         }
         Update: {
           business_name?: string | null
+          cancel_requested_at?: string | null
           created_at?: string
           current_streak_days?: number
           email?: string | null
@@ -201,6 +212,10 @@ export type Database = {
           onboarding_completed?: boolean
           plan?: Database["public"]["Enums"]["app_plan"]
           profession_type?: string | null
+          subscription_started_at?: string | null
+          subscription_status?: string
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string
           xp?: number
         }
@@ -326,7 +341,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      app_plan: "free" | "pro"
+      app_plan: "free" | "pro" | "trial" | "start" | "infinit"
       challenge_period: "weekly" | "monthly"
       expense_category:
         | "combustivel"
@@ -466,7 +481,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_plan: ["free", "pro"],
+      app_plan: ["free", "pro", "trial", "start", "infinit"],
       challenge_period: ["weekly", "monthly"],
       expense_category: [
         "combustivel",

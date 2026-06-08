@@ -59,8 +59,13 @@ function SignupPage() {
           <span className="font-display text-2xl font-bold uppercase">Trena</span>
         </Link>
         <div className="rounded-2xl border border-border bg-card p-8 shadow-elevated">
+          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-brand/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-dark">
+            ✨ 7 dias grátis · sem cartão
+          </div>
           <h1 className="font-display text-2xl font-bold">Crie sua conta</h1>
-          <p className="mt-1 text-sm text-muted-foreground">É grátis. Em 60s você já vê seu lucro real.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Teste o TRENA completo por 7 dias. Depois escolha entre Start (R$ 27,90) ou Infinit (R$ 19,90).
+          </p>
 
           <button
             onClick={handleGoogle}
