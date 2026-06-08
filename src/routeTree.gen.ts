@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -17,6 +18,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanosRoute = PlanosRouteImport.update({
+  id: '/planos',
+  path: '/planos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/login': typeof LoginRoute
+  '/planos': typeof PlanosRoute
   '/signup': typeof SignupRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/login': typeof LoginRoute
+  '/planos': typeof PlanosRoute
   '/signup': typeof SignupRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/login': typeof LoginRoute
+  '/planos': typeof PlanosRoute
   '/signup': typeof SignupRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/login' | '/signup'
+  fullPaths: '/' | '/app' | '/login' | '/planos' | '/signup'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app' | '/login' | '/signup'
-  id: '__root__' | '/' | '/app' | '/login' | '/signup'
+  to: '/' | '/app' | '/login' | '/planos' | '/signup'
+  id: '__root__' | '/' | '/app' | '/login' | '/planos' | '/signup'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRoute
   LoginRoute: typeof LoginRoute
+  PlanosRoute: typeof PlanosRoute
   SignupRoute: typeof SignupRoute
 }
 
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planos': {
+      id: '/planos'
+      path: '/planos'
+      fullPath: '/planos'
+      preLoaderRoute: typeof PlanosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -106,8 +123,19 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
   LoginRoute: LoginRoute,
+  PlanosRoute: PlanosRoute,
   SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
