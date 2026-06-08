@@ -136,6 +136,20 @@ function AppDashboard() {
   const [goals, setGoals] = useState<Goals>({ weekly: 0, monthly: 0 });
   const [hydrated, setHydrated] = useState(false);
 
+  const fetchSub = useServerFn(getSubscription);
+  const { data: sub } = useQuery({
+    queryKey: ["subscription"],
+    queryFn: () => fetchSub(),
+    enabled: !!user,
+  });
+
+  useEffect(() => {
+    if (sub?.trial_expired) {
+      navigate({ to: "/planos" });
+    }
+  }, [sub?.trial_expired, navigate]);
+
+
   useEffect(() => {
     const raw = loadLS<Service[]>(SERVICES_KEY, []);
     // migrate legacy services without date/period
