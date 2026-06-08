@@ -187,15 +187,23 @@ function AppDashboard() {
               Modo demo
             </span>
             {user ? (
-              <button
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate({ to: "/" });
-                }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold hover:bg-muted"
-              >
-                <LogOut className="size-3.5" /> Sair
-              </button>
+              <>
+                <Link
+                  to="/assinatura"
+                  className="hidden items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold hover:bg-muted sm:inline-flex"
+                >
+                  Assinatura
+                </Link>
+                <button
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    navigate({ to: "/" });
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold hover:bg-muted"
+                >
+                  <LogOut className="size-3.5" /> Sair
+                </button>
+              </>
             ) : (
               <Link
                 to="/login"
