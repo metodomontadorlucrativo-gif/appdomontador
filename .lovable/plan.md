@@ -1,67 +1,65 @@
-## O que vai mudar no /app (modo demo, localStorage)
 
-### 1. Cadastro de Serviço — novo campo de data
-No formulário de "Novo serviço", adicionar:
-- **Data do serviço** (campo date, obrigatório) — quando vai acontecer ou aconteceu.
-- **Período de cobrança** (select: `Dia` / `Semana` / `Mês`) — define em qual "balde" da projeção esse valor entra. Default: `Mês`.
+# Planos e trial de 7 dias
 
-Cada serviço passa a guardar `{ date, period }` além dos campos atuais (cliente, tipo, valor, status).
+Como você pulou as perguntas, vou seguir com decisões padrão sensatas. Se algo aqui não bater com o que você quer, é só me dizer antes de aprovar.
 
-### 2. Configuração de Metas
-Novo card "Minhas metas" no topo do Dashboard com 2 inputs:
-- **Meta semanal** (R$)
-- **Meta mensal** (R$)
+## Decisões padrão que estou tomando
 
-Salvas em `localStorage` (`trena_goals`). Editáveis a qualquer momento.
+- **Pagamento real fica para depois.** Agora implemento apenas a *lógica* de trial e planos no banco (sem cartão, sem Stripe). Quando você quiser cobrar de verdade, plugamos o Stripe por cima sem refazer nada do que vamos construir agora.
+- **Trial:** todo novo cadastro entra automaticamente em 7 dias grátis com acesso completo (equivalente ao Infinit). Não pede cartão.
+- **Start (R$ 27,90/mês):** preço promocional pelos 3 primeiros meses; depois disso muda para R$ 49,90/mês (vou deixar essa variável fácil de ajustar — me diga se for outro valor).
+- **Infinit (R$ 19,90/mês):** botão "Cancelar assinatura" fica desabilitado até completar 90 dias desde a assinatura. Depois, libera cancelamento normal.
 
-### 3. Dashboard — Realizado vs Projetado
-Substituir o card único de Faturamento por **dois números lado a lado**:
-- **Realizado** = soma dos serviços com status `Concluído` no período.
-- **Projetado** = Realizado + soma dos `Agendados` no período.
+## O que vai mudar para o usuário
 
-Mostrados para 2 escalas:
-- Semana atual (segunda → domingo)
-- Mês atual
-
-### 4. Visualização completa da meta
-Abaixo dos números, três blocos:
-
-**a) Barra de progresso dupla** (por meta semanal e mensal):
-```
-Meta mensal  R$ 10.000
-[████████░░░░░░░░] 60% realizado · 85% projetado
-Faltam R$ 4.000 para fechar · R$ 1.500 já agendados
-```
-Duas cores: realizado (sólido) + projetado (tom mais claro sobreposto).
-
-**b) Gráfico semanal** (barras das últimas 4 semanas) — realizado vs projetado por semana, usando `recharts` (já no projeto via shadcn chart).
-
-**c) Mini-calendário do mês** — grade simples mostrando dias com serviços, com pontinho colorido por status (agendado/concluído) e total do dia no hover/tap. Usa o `Calendar` do shadcn em modo read-only com `modifiers` customizados.
-
-### 5. Lista de Serviços
-- Adicionar coluna "Data" e badge do período.
-- Ordenar por data (mais próximos primeiro).
-- Filtro rápido: `Esta semana` / `Este mês` / `Todos`.
-
----
+1. **Cadastro (`/signup`)** — texto destacando "7 dias grátis, sem cartão".
+2. **Após login**, se o trial estiver ativo, aparece um *banner* no topo do `/app` mostrando "Faltam X dias do seu teste grátis" + botão "Ver planos".
+3. **Nova página `/app/planos`** — duas cartas (Start e Infinit) com os preços, benefícios e botão "Assinar". Por enquanto o botão só marca o plano no banco (mock) e mostra um toast "Em breve: pagamento". Quando ativarmos Stripe, esse botão vira o checkout real.
+4. **Página `/app/assinatura`** — mostra plano atual, dias restantes do trial (se aplicável), data de início, próxima cobrança (mock) e botão "Cancelar". O botão fica desabilitado com tooltip "Disponível após 3 meses" enquanto a regra do Infinit não for cumprida.
+5. **Quando o trial expira** sem assinar: ao entrar em `/app`, redireciona para `/app/planos` com um aviso "Seu teste acabou — escolha um plano para continuar".
 
 ## Detalhes técnicos
 
-- **Arquivos editados:** apenas `src/routes/app.tsx` (+ pequenos utilitários em `src/lib/trena.ts` se precisar de helpers de data tipo `startOfWeek`, `isInCurrentMonth`).
-- **Datas:** usar `date-fns` (já instalado) — `startOfWeek`, `endOfWeek`, `startOfMonth`, `endOfMonth`, `isWithinInterval`, locale `ptBR`, semana começando segunda.
-- **Estado:** continua tudo em `localStorage`. Chaves: `trena_services`, `trena_expenses` (existentes) + `trena_goals` (nova).
-- **Tipos:** `Service` ganha `date: string` (ISO yyyy-MM-dd) e `period: 'day' | 'week' | 'month'`. Migração leve: serviços antigos sem data usam `created_at`.
-- **Gráficos:** `recharts` via `@/components/ui/chart`.
-- **Sem mudanças de backend** nesta etapa — quando o usuário ativar login depois, replicamos o schema (`services.scheduled_at` já existe, `goals` já existe com `period` e `target_value`).
+### Banco (migração)
 
----
+Adicionar à tabela `profiles`:
 
-## Sugestões extras de usabilidade (pra você decidir depois, não entram agora)
+- `plan` — já existe (enum `app_plan`). Vou estender o enum para incluir: `trial`, `start`, `infinit` (além do `free` atual).
+- `trial_started_at` (timestamptz) — preenchido por trigger no signup.
+- `trial_ends_at` (timestamptz) — `trial_started_at + 7 days`.
+- `subscription_started_at` (timestamptz, nullable) — quando assinou Start ou Infinit.
+- `subscription_status` (text: `trialing` | `active` | `cancelled` | `expired`) — default `trialing`.
+- `cancel_requested_at` (timestamptz, nullable) — registra o pedido de cancelamento.
 
-1. **Status "Em andamento"** entre agendado e concluído, com timer/cronômetro do serviço — útil pra montador que cobra por hora.
-2. **Recorrência** de serviço (cliente fixo toda semana) com criação automática.
-3. **Lembrete no dia** via notificação do navegador.
-4. **Custo por serviço** (vincular despesas a um serviço específico pra ver lucro real por job, não só global).
-5. **Compartilhar resumo** do mês como imagem pro WhatsApp.
+Atualizar a função `handle_new_user()` para já marcar `plan = 'trial'`, `trial_started_at = now()`, `trial_ends_at = now() + interval '7 days'`, `subscription_status = 'trialing'`.
 
-Posso seguir implementando o plano acima?
+### Server functions (`src/lib/billing.functions.ts`)
+
+- `getSubscriptionStatus()` — devolve plano, dias restantes, se pode cancelar, etc.
+- `subscribeToPlan({ plan: 'start' | 'infinit' })` — marca o plano e `subscription_started_at = now()`. (Mock; Stripe entra aqui depois.)
+- `cancelSubscription()` — valida a regra de 90 dias para o Infinit; se for Start ou já passou dos 90 dias do Infinit, marca como `cancelled`.
+
+### Rotas novas
+
+```
+src/routes/_authenticated/app.planos.tsx
+src/routes/_authenticated/app.assinatura.tsx
+```
+
+### Componentes
+
+- `TrialBanner.tsx` — banner no topo do `/app` quando `subscription_status = 'trialing'`.
+- `PlanCard.tsx` — cartão de plano reutilizado nas duas telas.
+- Pequeno helper em `src/lib/trena.ts` para calcular dias restantes e se cancelamento está liberado.
+
+### Atualização do `signup.tsx`
+
+Adicionar selo "7 dias grátis · sem cartão" acima do formulário. Nenhuma mudança no fluxo de auth em si.
+
+## O que **não** está incluso (e fica para depois)
+
+- Integração real com Stripe / Paddle (checkout, webhooks, cobrança recorrente, recibos).
+- Restrição de funcionalidades por plano (gating de features Pro). Por enquanto todo plano pago ou em trial libera tudo.
+- Reembolsos, mudanças de plano (upgrade/downgrade) e provas fiscais.
+
+Quando aprovar, eu já implemento. Se quiser ajustar algum valor (preço cheio do Start após 3 meses, por exemplo) ou trocar a regra de cancelamento, me diga antes de clicar em aprovar.
