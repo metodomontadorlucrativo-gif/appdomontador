@@ -2,9 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Check, ArrowLeft, Sparkles, Infinity as InfinityIcon } from "lucide-react";
+import { Check, ArrowLeft, Sparkles, Infinity as InfinityIcon, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { getSubscription, subscribeToPlan } from "@/lib/billing.functions";
+import { useAuth } from "@/hooks/use-auth";
 import { Logo } from "./index";
 
 export const Route = createFileRoute("/planos")({
@@ -31,6 +32,7 @@ const PLAN_FEATURES = [
 function PlansPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { isAdmin } = useAuth();
   const fetchSub = useServerFn(getSubscription);
   const subscribe = useServerFn(subscribeToPlan);
   const [pending, setPending] = useState<"start" | "infinit" | null>(null);
@@ -68,12 +70,22 @@ function PlansPage() {
             <Logo size={32} />
             <span className="font-display text-lg font-bold uppercase">Trena</span>
           </Link>
-          <Link
-            to="/app"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" /> Voltar
-          </Link>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-foreground hover:bg-brand-dark"
+              >
+                <ShieldCheck className="size-3.5" /> Admin
+              </Link>
+            )}
+            <Link
+              to="/app"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="size-4" /> Voltar
+            </Link>
+          </div>
         </div>
       </header>
 

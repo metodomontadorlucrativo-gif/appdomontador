@@ -17,6 +17,24 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  async function routeAfterLogin() {
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData.user?.id;
+    if (uid) {
+      const { data: role } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", uid)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (role) {
+        navigate({ to: "/admin" });
+        return;
+      }
+    }
+    navigate({ to: "/app" });
+  }
+
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -26,7 +44,7 @@ function LoginPage() {
       toast.error("Email ou senha incorretos");
       return;
     }
-    navigate({ to: "/app" });
+    await routeAfterLogin();
   }
 
   async function handleGoogle() {
@@ -38,7 +56,7 @@ function LoginPage() {
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/app" });
+    await routeAfterLogin();
   }
 
   return (

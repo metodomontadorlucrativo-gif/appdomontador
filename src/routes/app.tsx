@@ -128,7 +128,7 @@ function servicePrice(s: Service): number {
 type Tab = "dashboard" | "services" | "expenses";
 
 function AppDashboard() {
-  const { user } = useAuth();
+  const { user, isAdmin, roleLoading } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("dashboard");
   const [services, setServices] = useState<Service[]>([]);
@@ -144,10 +144,12 @@ function AppDashboard() {
   });
 
   useEffect(() => {
+    if (roleLoading) return;
+    if (isAdmin) return;
     if (sub?.trial_expired) {
       navigate({ to: "/planos" });
     }
-  }, [sub?.trial_expired, navigate]);
+  }, [sub?.trial_expired, navigate, isAdmin, roleLoading]);
 
 
   useEffect(() => {
@@ -188,6 +190,14 @@ function AppDashboard() {
             </span>
             {user ? (
               <>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-foreground hover:bg-brand-dark"
+                  >
+                    Admin
+                  </Link>
+                )}
                 <Link
                   to="/assinatura"
                   className="hidden items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold hover:bg-muted sm:inline-flex"
