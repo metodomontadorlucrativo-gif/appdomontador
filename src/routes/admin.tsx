@@ -1,9 +1,30 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  listFreeAccessEmails,
+  addFreeAccessEmail,
+  removeFreeAccessEmail,
+} from "@/lib/admin.functions";
 import { Logo } from "./index";
-import { ShieldCheck, LogOut, Loader2, Users, CreditCard, Wrench } from "lucide-react";
+import {
+  ShieldCheck,
+  LogOut,
+  Loader2,
+  Users,
+  CreditCard,
+  Wrench,
+  Mail,
+  Plus,
+  Trash2,
+  Copy,
+  Check,
+  Gift,
+} from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — TRENA" }] }),
@@ -11,10 +32,8 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin, roleLoading } = useAuth();
   const navigate = useNavigate();
-  const [checking, setChecking] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [stats, setStats] = useState<{ users: number; trialing: number; paying: number } | null>(null);
 
   useEffect(() => {
@@ -23,32 +42,23 @@ function AdminPage() {
       navigate({ to: "/login" });
       return;
     }
-    (async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      const ok = !error && !!data;
-      setIsAdmin(ok);
-      setChecking(false);
-      if (ok) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("subscription_status");
-        if (profiles) {
-          setStats({
-            users: profiles.length,
-            trialing: profiles.filter((p) => p.subscription_status === "trialing").length,
-            paying: profiles.filter((p) => p.subscription_status === "active").length,
-          });
-        }
-      }
-    })();
-  }, [user, loading, navigate]);
+    if (!roleLoading && isAdmin) {
+      supabase
+        .from("profiles")
+        .select("subscription_status")
+        .then(({ data }) => {
+          if (data) {
+            setStats({
+              users: data.length,
+              trialing: data.filter((p) => p.subscription_status === "trialing").length,
+              paying: data.filter((p) => p.subscription_status === "active").length,
+            });
+          }
+        });
+    }
+  }, [user, loading, roleLoading, isAdmin, navigate]);
 
-  if (loading || checking) {
+  if (loading || roleLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -120,6 +130,8 @@ function AdminPage() {
           <StatCard icon={CreditCard} label="Assinantes ativos" value={stats?.paying ?? "—"} />
         </div>
 
+        <FreeAccessSection />
+
         <section className="rounded-2xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 text-sm font-bold">
             <Wrench className="size-4" /> Ações rápidas
@@ -145,13 +157,161 @@ function AdminPage() {
             </Link>
           </div>
         </section>
-
-        <div className="rounded-2xl border border-dashed border-border bg-background p-5 text-sm text-muted-foreground">
-          Esta área é independente do app dos assinantes. Use-a para edições e
-          testes sem afetar o ambiente dos usuários.
-        </div>
       </main>
     </div>
+  );
+}
+
+/* -------------------- Free access (gratuitos) -------------------- */
+
+function FreeAccessSection() {
+  const list = useServerFn(listFreeAccessEmails);
+  const add = useServerFn(addFreeAccessEmail);
+  const remove = useServerFn(removeFreeAccessEmail);
+  const qc = useQueryClient();
+
+  const [email, setEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const { data: emails, isLoading } = useQuery({
+    queryKey: ["free-access-emails"],
+    queryFn: () => list(),
+  });
+
+  const signupUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/signup` : "/signup";
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setBusy(true);
+    try {
+      await add({ data: { email, note: note || null } });
+      toast.success("Email liberado para acesso gratuito");
+      setEmail("");
+      setNote("");
+      qc.invalidateQueries({ queryKey: ["free-access-emails"] });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Erro ao adicionar email");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemove(id: string) {
+    if (!confirm("Remover este email da lista de acesso gratuito?")) return;
+    try {
+      await remove({ data: { id } });
+      toast.success("Email removido");
+      qc.invalidateQueries({ queryKey: ["free-access-emails"] });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Erro ao remover");
+    }
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(signupUrl);
+      setCopied(true);
+      toast.success("Link copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  }
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-center gap-2 text-sm font-bold">
+        <Gift className="size-4 text-brand" /> Acesso gratuito ao TRENA
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Cadastre emails de usuários convidados. Quando eles se cadastrarem com o
+        email autorizado, o TRENA será liberado <strong>sem cobrança de planos</strong>.
+      </p>
+
+      {/* Share link */}
+      <div className="mt-4 flex flex-col gap-2 rounded-xl border border-dashed border-border bg-background p-3 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Link para compartilhar
+          </div>
+          <div className="truncate font-mono text-xs text-foreground">{signupUrl}</div>
+        </div>
+        <button
+          onClick={copyLink}
+          className="inline-flex items-center justify-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-brand-foreground hover:bg-brand-dark"
+        >
+          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+          {copied ? "Copiado" : "Copiar link"}
+        </button>
+      </div>
+
+      {/* Add form */}
+      <form onSubmit={handleAdd} className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+        <div className="relative">
+          <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="email"
+            required
+            placeholder="email@exemplo.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand"
+          />
+        </div>
+        <input
+          type="text"
+          placeholder="Observação (opcional)"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          maxLength={200}
+          className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-brand"
+        />
+        <button
+          type="submit"
+          disabled={busy}
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+        >
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+          Adicionar
+        </button>
+      </form>
+
+      {/* List */}
+      <div className="mt-4 overflow-hidden rounded-xl border border-border">
+        {isLoading ? (
+          <div className="flex items-center justify-center p-6 text-sm text-muted-foreground">
+            <Loader2 className="mr-2 size-4 animate-spin" /> Carregando…
+          </div>
+        ) : !emails || emails.length === 0 ? (
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            Nenhum email cadastrado ainda.
+          </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {emails.map((e) => (
+              <li key={e.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold">{e.email}</div>
+                  {e.note && (
+                    <div className="truncate text-xs text-muted-foreground">{e.note}</div>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleRemove(e.id)}
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="size-3.5" /> Remover
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
   );
 }
 
