@@ -650,34 +650,55 @@ function GoalsForm({
 }) {
   const [weekly, setWeekly] = useState(String(initial.weekly || ""));
   const [monthly, setMonthly] = useState(String(initial.monthly || ""));
+  // Aceita formatos: "10000", "10.000", "10,000", "10000.50", "10000,50", "10.000,50"
+  const parseBR = (v: string) => {
+    const s = v.trim();
+    if (!s) return 0;
+    const hasComma = s.includes(",");
+    const hasDot = s.includes(".");
+    let normalized = s;
+    if (hasComma && hasDot) {
+      // assume ponto = milhar, vírgula = decimal (pt-BR)
+      normalized = s.replace(/\./g, "").replace(",", ".");
+    } else if (hasComma) {
+      // só vírgula: pode ser decimal ou milhar. Se tiver exatamente 3 dígitos após, milhar.
+      const after = s.split(",")[1] ?? "";
+      normalized = after.length === 3 ? s.replace(",", "") : s.replace(",", ".");
+    } else if (hasDot) {
+      // só ponto: se tiver exatamente 3 dígitos após, milhar (ex: 10.000)
+      const after = s.split(".").pop() ?? "";
+      const dots = (s.match(/\./g) ?? []).length;
+      if (dots > 1 || after.length === 3) normalized = s.replace(/\./g, "");
+    }
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : 0;
+  };
   return (
     <Modal onClose={onClose} title="Suas metas de ganho">
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          onSave({ weekly: Number(weekly) || 0, monthly: Number(monthly) || 0 });
+          onSave({ weekly: parseBR(weekly), monthly: parseBR(monthly) });
           onClose();
         }}
         className="space-y-4"
       >
         <Field label="Meta semanal (R$)">
           <input
-            type="number"
+            type="text"
             inputMode="decimal"
-            step="0.01"
             value={weekly}
-            onChange={(e) => setWeekly(e.target.value)}
+            onChange={(e) => setWeekly(e.target.value.replace(/[^\d.,]/g, ""))}
             placeholder="2500"
             className="input"
           />
         </Field>
         <Field label="Meta mensal (R$)">
           <input
-            type="number"
+            type="text"
             inputMode="decimal"
-            step="0.01"
             value={monthly}
-            onChange={(e) => setMonthly(e.target.value)}
+            onChange={(e) => setMonthly(e.target.value.replace(/[^\d.,]/g, ""))}
             placeholder="10000"
             className="input"
           />
