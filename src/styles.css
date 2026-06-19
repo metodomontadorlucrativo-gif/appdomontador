@@ -202,3 +202,16 @@
 .animate-count-up { animation: count-up 0.4s ease-out both; }
 .animate-pop-in { animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .animate-bar-fill { animation: bar-fill 0.9s cubic-bezier(0.19, 1, 0.22, 1) both; }
+
+/* Hide Lovable badge elements */
+a[href*="lovable.dev"],
+iframe[src*="lovable.dev"],
+div[style*="Edit with Lovable"],
+.lovable-badge {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  z-index: -9999 !important;
+}
