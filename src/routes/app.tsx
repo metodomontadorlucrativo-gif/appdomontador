@@ -370,6 +370,40 @@ function DashboardTab({
     return weeks;
   }, [services]);
 
+  // Séries diárias acumuladas (realizado) para sparkline das metas
+  const weeklyDailySeries = useMemo(() => {
+    const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+    let acc = 0;
+    return days.map((d) => {
+      acc += services
+        .filter(
+          (s) => s.status === "completed" && isSameDay(serviceDate(s), d),
+        )
+        .reduce((a, s) => a + servicePrice(s), 0);
+      return acc;
+    });
+  }, [services, weekStart.getTime(), weekEnd.getTime()]);
+
+  const monthlyDailySeries = useMemo(() => {
+    const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    let acc = 0;
+    return days.map((d) => {
+      acc += services
+        .filter(
+          (s) => s.status === "completed" && isSameDay(serviceDate(s), d),
+        )
+        .reduce((a, s) => a + servicePrice(s), 0);
+      return acc;
+    });
+  }, [services, monthStart.getTime(), monthEnd.getTime()]);
+
+  const todayWeeklyIdx = eachDayOfInterval({ start: weekStart, end: weekEnd }).findIndex(
+    (d) => isSameDay(d, now),
+  );
+  const todayMonthlyIdx = eachDayOfInterval({ start: monthStart, end: monthEnd }).findIndex(
+    (d) => isSameDay(d, now),
+  );
+
   const maxWeekly = Math.max(1, ...weeklySeries.map((w) => Math.max(w.projected, goals.weekly)));
 
   return (
@@ -399,6 +433,8 @@ function DashboardTab({
           projected={m.projectedWeek}
           subtitle={`${format(weekStart, "dd/MM", { locale: ptBR })} – ${format(weekEnd, "dd/MM", { locale: ptBR })}`}
           onSet={() => setEditGoals(true)}
+          series={weeklyDailySeries}
+          todayIndex={todayWeeklyIdx}
         />
         <GoalProgress
           title="Meta mensal"
@@ -408,6 +444,8 @@ function DashboardTab({
           projected={m.projectedMonth}
           subtitle={format(now, "MMMM 'de' yyyy", { locale: ptBR })}
           onSet={() => setEditGoals(true)}
+          series={monthlyDailySeries}
+          todayIndex={todayMonthlyIdx}
         />
       </div>
 
@@ -481,6 +519,8 @@ function GoalProgress({
   projected,
   subtitle,
   onSet,
+  series,
+  todayIndex,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -489,6 +529,8 @@ function GoalProgress({
   projected: number;
   subtitle: string;
   onSet: () => void;
+  series?: number[];
+  todayIndex?: number;
 }) {
   const hasGoal = goal > 0;
   const realPct = hasGoal ? Math.min(100, (realized / goal) * 100) : 0;
@@ -542,6 +584,9 @@ function GoalProgress({
               </div>
             </div>
           </div>
+          {series && series.length > 1 && (
+            <GoalSparkline points={series} goal={goal} todayIndex={todayIndex ?? -1} />
+          )}
           {fromScheduled > 0 && (
             <div className="mt-2 text-[11px] text-muted-foreground">
               {formatBRL(fromScheduled)} já agendados aguardando conclusão.
@@ -550,6 +595,80 @@ function GoalProgress({
         </>
       )}
     </section>
+  );
+}
+
+function GoalSparkline({
+  points,
+  goal,
+  todayIndex,
+}: {
+  points: number[];
+  goal: number;
+  todayIndex: number;
+}) {
+  const W = 100;
+  const H = 28;
+  const padY = 3;
+  const max = Math.max(goal || 0, ...points, 1);
+  const n = points.length;
+  const x = (i: number) => (n === 1 ? 0 : (i / (n - 1)) * W);
+  const y = (v: number) => H - padY - (v / max) * (H - padY * 2);
+
+  const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(2)},${y(p).toFixed(2)}`).join(" ");
+  const areaPath = `${linePath} L${x(n - 1).toFixed(2)},${H} L0,${H} Z`;
+  const goalY = goal > 0 ? y(goal) : null;
+  const gradId = `gp-${Math.random().toString(36).slice(2, 8)}`;
+
+  return (
+    <div className="mt-3">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        className="h-7 w-full overflow-visible"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id={gradId} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <g className="text-brand">
+          <path d={areaPath} fill={`url(#${gradId})`} />
+          <path
+            d={linePath}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.25"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+          {goalY !== null && (
+            <line
+              x1="0"
+              x2={W}
+              y1={goalY}
+              y2={goalY}
+              stroke="currentColor"
+              strokeOpacity="0.55"
+              strokeWidth="1"
+              strokeDasharray="2 2"
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+          {todayIndex >= 0 && todayIndex < n && (
+            <circle
+              cx={x(todayIndex)}
+              cy={y(points[todayIndex])}
+              r="1.8"
+              fill="currentColor"
+            />
+          )}
+        </g>
+      </svg>
+    </div>
   );
 }
 
