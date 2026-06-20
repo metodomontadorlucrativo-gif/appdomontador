@@ -519,6 +519,8 @@ function GoalProgress({
   projected,
   subtitle,
   onSet,
+  series,
+  todayIndex,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -527,6 +529,8 @@ function GoalProgress({
   projected: number;
   subtitle: string;
   onSet: () => void;
+  series?: number[];
+  todayIndex?: number;
 }) {
   const hasGoal = goal > 0;
   const realPct = hasGoal ? Math.min(100, (realized / goal) * 100) : 0;
