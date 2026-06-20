@@ -370,6 +370,40 @@ function DashboardTab({
     return weeks;
   }, [services]);
 
+  // Séries diárias acumuladas (realizado) para sparkline das metas
+  const weeklyDailySeries = useMemo(() => {
+    const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+    let acc = 0;
+    return days.map((d) => {
+      acc += services
+        .filter(
+          (s) => s.status === "completed" && isSameDay(serviceDate(s), d),
+        )
+        .reduce((a, s) => a + servicePrice(s), 0);
+      return acc;
+    });
+  }, [services, weekStart.getTime(), weekEnd.getTime()]);
+
+  const monthlyDailySeries = useMemo(() => {
+    const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    let acc = 0;
+    return days.map((d) => {
+      acc += services
+        .filter(
+          (s) => s.status === "completed" && isSameDay(serviceDate(s), d),
+        )
+        .reduce((a, s) => a + servicePrice(s), 0);
+      return acc;
+    });
+  }, [services, monthStart.getTime(), monthEnd.getTime()]);
+
+  const todayWeeklyIdx = eachDayOfInterval({ start: weekStart, end: weekEnd }).findIndex(
+    (d) => isSameDay(d, now),
+  );
+  const todayMonthlyIdx = eachDayOfInterval({ start: monthStart, end: monthEnd }).findIndex(
+    (d) => isSameDay(d, now),
+  );
+
   const maxWeekly = Math.max(1, ...weeklySeries.map((w) => Math.max(w.projected, goals.weekly)));
 
   return (
