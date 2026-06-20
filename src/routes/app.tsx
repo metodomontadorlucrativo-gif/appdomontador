@@ -433,6 +433,8 @@ function DashboardTab({
           projected={m.projectedWeek}
           subtitle={`${format(weekStart, "dd/MM", { locale: ptBR })} – ${format(weekEnd, "dd/MM", { locale: ptBR })}`}
           onSet={() => setEditGoals(true)}
+          series={weeklyDailySeries}
+          todayIndex={todayWeeklyIdx}
         />
         <GoalProgress
           title="Meta mensal"
@@ -442,6 +444,8 @@ function DashboardTab({
           projected={m.projectedMonth}
           subtitle={format(now, "MMMM 'de' yyyy", { locale: ptBR })}
           onSet={() => setEditGoals(true)}
+          series={monthlyDailySeries}
+          todayIndex={todayMonthlyIdx}
         />
       </div>
 
