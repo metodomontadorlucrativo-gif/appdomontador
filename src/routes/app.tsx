@@ -534,8 +534,12 @@ function GoalProgress({
               <div className="font-display text-sm font-bold text-brand-dark">{formatBRL(projected)}</div>
             </div>
             <div>
-              <div className="text-muted-foreground">Faltam</div>
-              <div className="font-display text-sm font-bold">{formatBRL(remaining)}</div>
+              <div className="text-muted-foreground">
+                {remaining === 0 ? "Meta batida" : "Faltam"}
+              </div>
+              <div className="font-display text-sm font-bold">
+                {remaining === 0 ? "🎉" : formatBRL(remaining)}
+              </div>
             </div>
           </div>
           {fromScheduled > 0 && (
