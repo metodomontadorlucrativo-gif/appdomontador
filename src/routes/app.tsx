@@ -584,6 +584,9 @@ function GoalProgress({
               </div>
             </div>
           </div>
+          {series && series.length > 1 && (
+            <GoalSparkline points={series} goal={goal} todayIndex={todayIndex ?? -1} />
+          )}
           {fromScheduled > 0 && (
             <div className="mt-2 text-[11px] text-muted-foreground">
               {formatBRL(fromScheduled)} já agendados aguardando conclusão.
