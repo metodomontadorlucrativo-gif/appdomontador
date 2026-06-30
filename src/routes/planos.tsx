@@ -127,6 +127,34 @@ function PlansPage() {
           </p>
         </div>
 
+        {canExtend && (
+          <div className="mx-auto mt-8 max-w-3xl rounded-2xl border-2 border-dashed border-brand bg-brand/5 p-5 sm:p-6">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-brand/15 p-2.5 text-brand-dark">
+                  <Gift className="size-5" />
+                </div>
+                <div>
+                  <div className="font-display text-lg font-bold">
+                    Ganhe +10 dias de teste grátis
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Por enquanto liberamos mais 10 dias de uso gratuito para você continuar
+                    testando o TRENA antes de assinar.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleExtend}
+                disabled={extending}
+                className="w-full shrink-0 rounded-full bg-brand px-5 py-3 text-sm font-bold text-brand-foreground hover:bg-brand-dark disabled:opacity-60 sm:w-auto"
+              >
+                {extending ? "Liberando..." : "Liberar +10 dias grátis"}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="mt-10 grid gap-5 md:grid-cols-2">
           <PlanCard
             name="Start"
