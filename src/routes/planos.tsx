@@ -35,7 +35,9 @@ function PlansPage() {
   const { isAdmin } = useAuth();
   const fetchSub = useServerFn(getSubscription);
   const subscribe = useServerFn(subscribeToPlan);
+  const extend = useServerFn(extendTrial);
   const [pending, setPending] = useState<"start" | "infinit" | null>(null);
+  const [extending, setExtending] = useState(false);
 
   const { data: sub } = useQuery({
     queryKey: ["subscription"],
