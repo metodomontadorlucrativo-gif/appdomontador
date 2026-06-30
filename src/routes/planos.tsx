@@ -2,9 +2,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Check, ArrowLeft, Sparkles, Infinity as InfinityIcon, ShieldCheck } from "lucide-react";
+import { Check, ArrowLeft, Sparkles, Infinity as InfinityIcon, ShieldCheck, Gift } from "lucide-react";
 import { toast } from "sonner";
-import { getSubscription, subscribeToPlan } from "@/lib/billing.functions";
+import { getSubscription, subscribeToPlan, extendTrial } from "@/lib/billing.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { Logo } from "./index";
 
