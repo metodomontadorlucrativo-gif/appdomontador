@@ -197,6 +197,7 @@ export type Database = {
           subscription_started_at: string | null
           subscription_status: string
           trial_ends_at: string | null
+          trial_extended_at: string | null
           trial_started_at: string | null
           updated_at: string
           xp: number
@@ -218,6 +219,7 @@ export type Database = {
           subscription_started_at?: string | null
           subscription_status?: string
           trial_ends_at?: string | null
+          trial_extended_at?: string | null
           trial_started_at?: string | null
           updated_at?: string
           xp?: number
@@ -239,6 +241,7 @@ export type Database = {
           subscription_started_at?: string | null
           subscription_status?: string
           trial_ends_at?: string | null
+          trial_extended_at?: string | null
           trial_started_at?: string | null
           updated_at?: string
           xp?: number
