@@ -63,6 +63,22 @@ function PlansPage() {
   }
 
   const trialExpired = sub?.trial_expired;
+  const isOnPaidPlan = sub?.status === "active" && (sub?.plan === "start" || sub?.plan === "infinit");
+  const canExtend = !isOnPaidPlan;
+
+  async function handleExtend() {
+    setExtending(true);
+    try {
+      await extend();
+      toast.success("Mais 10 dias liberados no seu teste grátis!");
+      await qc.invalidateQueries({ queryKey: ["subscription"] });
+      navigate({ to: "/app" });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Não foi possível estender o teste");
+    } finally {
+      setExtending(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-secondary/30 pb-20">
