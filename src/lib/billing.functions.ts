@@ -140,3 +140,46 @@ export const cancelSubscription = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return buildView(updated);
   });
+
+export const extendTrial = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<SubscriptionView> => {
+    const { supabase, userId } = context;
+    const { data: row, error: readErr } = await supabase
+      .from("profiles")
+      .select(
+        "plan, subscription_status, trial_started_at, trial_ends_at, subscription_started_at, cancel_requested_at, trial_extended_at",
+      )
+      .eq("id", userId)
+      .single();
+    if (readErr) throw new Error(readErr.message);
+
+    if ((row as any)?.trial_extended_at) {
+      throw new Error("Você já estendeu seu teste grátis. Escolha um plano para continuar.");
+    }
+    if (row?.subscription_status === "active" && (row?.plan === "start" || row?.plan === "infinit")) {
+      throw new Error("Você já tem um plano ativo.");
+    }
+
+    const now = new Date();
+    const currentEnd = row?.trial_ends_at ? new Date(row.trial_ends_at) : now;
+    const base = currentEnd.getTime() > now.getTime() ? currentEnd : now;
+    const newEnd = new Date(base.getTime() + 10 * 86400000);
+
+    const { data: updated, error } = await supabase
+      .from("profiles")
+      .update({
+        plan: "trial",
+        subscription_status: "trialing",
+        trial_ends_at: newEnd.toISOString(),
+        trial_extended_at: now.toISOString(),
+        cancel_requested_at: null,
+      })
+      .eq("id", userId)
+      .select(
+        "plan, subscription_status, trial_started_at, trial_ends_at, subscription_started_at, cancel_requested_at",
+      )
+      .single();
+    if (error) throw new Error(error.message);
+    return buildView(updated);
+  });

@@ -2,9 +2,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Check, ArrowLeft, Sparkles, Infinity as InfinityIcon, ShieldCheck } from "lucide-react";
+import { Check, ArrowLeft, Sparkles, Infinity as InfinityIcon, ShieldCheck, Gift } from "lucide-react";
 import { toast } from "sonner";
-import { getSubscription, subscribeToPlan } from "@/lib/billing.functions";
+import { getSubscription, subscribeToPlan, extendTrial } from "@/lib/billing.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { Logo } from "./index";
 
@@ -35,7 +35,9 @@ function PlansPage() {
   const { isAdmin } = useAuth();
   const fetchSub = useServerFn(getSubscription);
   const subscribe = useServerFn(subscribeToPlan);
+  const extend = useServerFn(extendTrial);
   const [pending, setPending] = useState<"start" | "infinit" | null>(null);
+  const [extending, setExtending] = useState(false);
 
   const { data: sub } = useQuery({
     queryKey: ["subscription"],
@@ -61,6 +63,22 @@ function PlansPage() {
   }
 
   const trialExpired = sub?.trial_expired;
+  const isOnPaidPlan = sub?.status === "active" && (sub?.plan === "start" || sub?.plan === "infinit");
+  const canExtend = !isOnPaidPlan;
+
+  async function handleExtend() {
+    setExtending(true);
+    try {
+      await extend();
+      toast.success("Mais 10 dias liberados no seu teste grátis!");
+      await qc.invalidateQueries({ queryKey: ["subscription"] });
+      navigate({ to: "/app" });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Não foi possível estender o teste");
+    } finally {
+      setExtending(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-secondary/30 pb-20">
@@ -108,6 +126,34 @@ function PlansPage() {
             preço promocional.
           </p>
         </div>
+
+        {canExtend && (
+          <div className="mx-auto mt-8 max-w-3xl rounded-2xl border-2 border-dashed border-brand bg-brand/5 p-5 sm:p-6">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-brand/15 p-2.5 text-brand-dark">
+                  <Gift className="size-5" />
+                </div>
+                <div>
+                  <div className="font-display text-lg font-bold">
+                    Ganhe +10 dias de teste grátis
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Por enquanto liberamos mais 10 dias de uso gratuito para você continuar
+                    testando o TRENA antes de assinar.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleExtend}
+                disabled={extending}
+                className="w-full shrink-0 rounded-full bg-brand px-5 py-3 text-sm font-bold text-brand-foreground hover:bg-brand-dark disabled:opacity-60 sm:w-auto"
+              >
+                {extending ? "Liberando..." : "Liberar +10 dias grátis"}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="mt-10 grid gap-5 md:grid-cols-2">
           <PlanCard
