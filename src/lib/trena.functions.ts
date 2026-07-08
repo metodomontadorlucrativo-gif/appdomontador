@@ -60,7 +60,8 @@ async function awardXp(
   const newXp = (profile?.xp ?? 0) + amount;
   const newLevel = levelFromXp(newXp);
 
-  await supabase
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await supabaseAdmin
     .from("profiles")
     .update({ xp: newXp, level: newLevel })
     .eq("id", userId);
@@ -86,7 +87,8 @@ async function updateStreak(supabase: any, userId: string): Promise<number> {
       ? (profile.current_streak_days ?? 0) + 1
       : 1;
 
-  await supabase
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await supabaseAdmin
     .from("profiles")
     .update({ last_activity_date: today, current_streak_days: newStreak })
     .eq("id", userId);
@@ -114,7 +116,8 @@ async function tryUnlock(
     .single();
   if (!ach) return { unlocked: false, xp: 0 };
 
-  const { error } = await supabase
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { error } = await supabaseAdmin
     .from("user_achievements")
     .insert({ user_id: userId, achievement_code: code });
   if (error) return { unlocked: false, xp: 0 };

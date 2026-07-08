@@ -86,8 +86,9 @@ export const subscribeToPlan = createServerFn({ method: "POST" })
     z.object({ plan: z.enum(["start", "infinit"]) }).parse(i),
   )
   .handler(async ({ context, data }): Promise<SubscriptionView> => {
-    const { supabase, userId } = context;
-    const { data: updated, error } = await supabase
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: updated, error } = await supabaseAdmin
       .from("profiles")
       .update({
         plan: data.plan,
@@ -126,7 +127,8 @@ export const cancelSubscription = createServerFn({ method: "POST" })
       );
     }
 
-    const { data: updated, error } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: updated, error } = await supabaseAdmin
       .from("profiles")
       .update({
         subscription_status: "cancelled",
@@ -166,7 +168,8 @@ export const extendTrial = createServerFn({ method: "POST" })
     const base = currentEnd.getTime() > now.getTime() ? currentEnd : now;
     const newEnd = new Date(base.getTime() + 15 * 86400000);
 
-    const { data: updated, error } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: updated, error } = await supabaseAdmin
       .from("profiles")
       .update({
         plan: "trial",
