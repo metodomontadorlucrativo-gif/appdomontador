@@ -60,7 +60,8 @@ export const addFreeAccessEmail = createServerFn({ method: "POST" })
     }
 
     // If a user with this email already exists, promote them to 'free' / 'active'
-    const { error: upErr } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: upErr } = await supabaseAdmin
       .from("profiles")
       .update({
         plan: "free",
