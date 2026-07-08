@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Check, ArrowLeft, Sparkles, Infinity as InfinityIcon, ShieldCheck, Gift } from "lucide-react";
+import { Check, ArrowLeft, Sparkles, Infinity as InfinityIcon, ShieldCheck, Gift, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { getSubscription, subscribeToPlan, extendTrial } from "@/lib/billing.functions";
 import { useAuth } from "@/hooks/use-auth";
@@ -108,11 +108,37 @@ function PlansPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        {trialExpired && (
+        {trialExpired ? (
           <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm font-semibold text-destructive">
             Seu teste grátis terminou. Escolha um plano para continuar usando o TRENA.
           </div>
-        )}
+        ) : sub?.status === "trialing" ? (
+          <div className="mx-auto mb-6 flex max-w-2xl items-center justify-between gap-3 rounded-xl border border-brand/30 bg-brand/10 p-4 text-brand-dark">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-brand/20 p-2">
+                <Clock className="size-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider opacity-80">
+                  Seu teste grátis
+                </div>
+                <div className="text-sm font-semibold">
+                  {sub.days_left_trial > 0
+                    ? `Restam ${sub.days_left_trial} dia${sub.days_left_trial === 1 ? "" : "s"} de teste`
+                    : "Último dia do seu teste"}
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="font-display text-3xl font-bold leading-none">
+                {sub.days_left_trial}
+              </div>
+              <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                dia{sub.days_left_trial === 1 ? "" : "s"}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="mx-auto max-w-2xl text-center">
           <span className="rounded-full bg-brand/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-dark">
