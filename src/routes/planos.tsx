@@ -136,10 +136,10 @@ function PlansPage() {
                 </div>
                 <div>
                   <div className="font-display text-lg font-bold">
-                    Ganhe +10 dias de teste grátis
+                    Ganhe +15 dias de teste grátis
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Por enquanto liberamos mais 10 dias de uso gratuito para você continuar
+                    Por enquanto liberamos mais 15 dias de uso gratuito para você continuar
                     testando o TRENA antes de assinar.
                   </p>
                 </div>
@@ -149,7 +149,7 @@ function PlansPage() {
                 disabled={extending}
                 className="w-full shrink-0 rounded-full bg-brand px-5 py-3 text-sm font-bold text-brand-foreground hover:bg-brand-dark disabled:opacity-60 sm:w-auto"
               >
-                {extending ? "Liberando..." : "Liberar +10 dias grátis"}
+                {extending ? "Liberando..." : "Liberar +15 dias grátis"}
               </button>
             </div>
           </div>
