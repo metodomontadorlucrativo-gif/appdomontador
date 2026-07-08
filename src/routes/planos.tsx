@@ -70,7 +70,7 @@ function PlansPage() {
     setExtending(true);
     try {
       await extend();
-      toast.success("Mais 15 dias liberados no seu teste grátis!");
+      toast.success("Teste grátis de 30 dias liberado!");
       await qc.invalidateQueries({ queryKey: ["subscription"] });
       navigate({ to: "/app" });
     } catch (err: any) {
@@ -136,11 +136,11 @@ function PlansPage() {
                 </div>
                 <div>
                   <div className="font-display text-lg font-bold">
-                    Ganhe +15 dias de teste grátis
+                    Aproveite: teste 30 dias
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Por enquanto liberamos mais 15 dias de uso gratuito para você continuar
-                    testando o TRENA antes de assinar.
+                    Por enquanto liberamos 30 dias de uso gratuito para você aproveitar
+                    todas as funções do TRENA antes de assinar.
                   </p>
                 </div>
               </div>
@@ -149,7 +149,7 @@ function PlansPage() {
                 disabled={extending}
                 className="w-full shrink-0 rounded-full bg-brand px-5 py-3 text-sm font-bold text-brand-foreground hover:bg-brand-dark disabled:opacity-60 sm:w-auto"
               >
-                {extending ? "Liberando..." : "Liberar +15 dias grátis"}
+                {extending ? "Liberando..." : "Aproveite: teste 30 dias"}
               </button>
             </div>
           </div>
