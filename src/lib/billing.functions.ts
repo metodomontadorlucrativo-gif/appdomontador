@@ -164,7 +164,7 @@ export const extendTrial = createServerFn({ method: "POST" })
     const now = new Date();
     const currentEnd = row?.trial_ends_at ? new Date(row.trial_ends_at) : now;
     const base = currentEnd.getTime() > now.getTime() ? currentEnd : now;
-    const newEnd = new Date(base.getTime() + 10 * 86400000);
+    const newEnd = new Date(base.getTime() + 15 * 86400000);
 
     const { data: updated, error } = await supabase
       .from("profiles")
