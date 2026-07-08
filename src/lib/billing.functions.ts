@@ -156,17 +156,12 @@ export const extendTrial = createServerFn({ method: "POST" })
       .single();
     if (readErr) throw new Error(readErr.message);
 
-    if ((row as any)?.trial_extended_at) {
-      throw new Error("Você já estendeu seu teste grátis. Escolha um plano para continuar.");
-    }
     if (row?.subscription_status === "active" && (row?.plan === "start" || row?.plan === "infinit")) {
       throw new Error("Você já tem um plano ativo.");
     }
 
     const now = new Date();
-    const currentEnd = row?.trial_ends_at ? new Date(row.trial_ends_at) : now;
-    const base = currentEnd.getTime() > now.getTime() ? currentEnd : now;
-    const newEnd = new Date(base.getTime() + 15 * 86400000);
+    const newEnd = new Date(now.getTime() + 30 * 86400000);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: updated, error } = await supabaseAdmin
