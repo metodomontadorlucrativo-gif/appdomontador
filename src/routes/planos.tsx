@@ -204,14 +204,15 @@ function TrialProgressCard({ sub }: { sub: import("@/lib/billing.functions").Sub
   const now = Date.now();
 
   let usedMs = 0;
-  if (sub.trial_started_at) {
+  if (sub.trial_ends_at) {
+    const endMs = new Date(sub.trial_ends_at).getTime();
+    usedMs = totalMs - Math.max(0, endMs - now);
+  } else if (sub.trial_started_at) {
     usedMs = now - new Date(sub.trial_started_at).getTime();
-  } else if (sub.trial_ends_at) {
-    usedMs = totalMs - Math.max(0, new Date(sub.trial_ends_at).getTime() - now);
   }
 
   const pct = Math.min(100, Math.max(0, (usedMs / totalMs) * 100));
-  const usedDays = Math.max(0, Math.floor(usedMs / 86400000));
+  const usedDays = Math.min(totalDays, Math.max(0, Math.floor(usedMs / 86400000)));
   const remaining = Math.max(0, totalDays - usedDays);
 
   return (
