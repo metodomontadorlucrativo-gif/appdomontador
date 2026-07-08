@@ -70,7 +70,7 @@ function PlansPage() {
     setExtending(true);
     try {
       await extend();
-      toast.success("Mais 10 dias liberados no seu teste grátis!");
+      toast.success("Mais 15 dias liberados no seu teste grátis!");
       await qc.invalidateQueries({ queryKey: ["subscription"] });
       navigate({ to: "/app" });
     } catch (err: any) {
