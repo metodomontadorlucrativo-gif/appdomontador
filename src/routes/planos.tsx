@@ -15,8 +15,23 @@ export const Route = createFileRoute("/planos")({
       {
         name: "description",
         content:
-          "Escolha o plano que se encaixa no seu momento: Start a partir de R$ 27,90 ou Infinit R$ 19,90.",
+          "Escolha o plano que se encaixa no seu momento: Start a partir de R$ 27,90 ou Infinit R$ 19,90. Teste grátis de 30 dias disponível.",
       },
+      { property: "og:title", content: "Planos — TRENA" },
+      {
+        property: "og:description",
+        content:
+          "Escolha o plano ideal: Start R$ 27,90/mês ou Infinit R$ 19,90/mês. Aproveite 30 dias de teste grátis.",
+      },
+      { property: "og:url", content: "https://appdomontador.lovable.app/planos" },
+      { property: "og:image", content: "https://appdomontador.lovable.app/__l5e/assets-v1/7be4618c-581b-4a21-89fc-faf407e3f42b/og-trena.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://appdomontador.lovable.app/__l5e/assets-v1/7be4618c-581b-4a21-89fc-faf407e3f42b/og-trena.png" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://appdomontador.lovable.app/planos" },
     ],
   }),
   component: PlansPage,
