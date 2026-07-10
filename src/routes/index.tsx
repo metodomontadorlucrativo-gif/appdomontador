@@ -45,9 +45,14 @@ function Header() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <Link to="/" className="flex items-center gap-2">
           <Logo />
-          <span className="font-display text-2xl font-bold uppercase tracking-tight">
-            Trena
-          </span>
+          <div className="flex flex-col">
+            <span className="font-display text-2xl font-bold uppercase tracking-tight leading-none">
+              Trena
+            </span>
+            <span className="text-[10px] font-medium uppercase tracking-wide text-brand-dark">
+              Acompanhe seu faturamento e conquiste suas metas.
+            </span>
+          </div>
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
           <a href="#beneficios" className="hover:text-foreground">Benefícios</a>
