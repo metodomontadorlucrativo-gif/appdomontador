@@ -44,7 +44,7 @@ const PLAN_FEATURES = [
   "Sistema de XP, níveis e conquistas",
 ];
 
-function PlansPage() {
+export function PlansPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { isAdmin, session, loading: authLoading } = useAuth();
