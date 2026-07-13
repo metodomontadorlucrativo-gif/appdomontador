@@ -47,7 +47,7 @@ const PLAN_FEATURES = [
 function PlansPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { isAdmin } = useAuth();
+  const { isAdmin, session, loading: authLoading } = useAuth();
   const fetchSub = useServerFn(getSubscription);
   const subscribe = useServerFn(subscribeToPlan);
   const extend = useServerFn(extendTrial);
@@ -57,9 +57,15 @@ function PlansPage() {
   const { data: sub } = useQuery({
     queryKey: ["subscription"],
     queryFn: () => fetchSub(),
+    enabled: !!session,
   });
 
   async function handleSubscribe(plan: "start" | "infinit") {
+    if (!session) {
+      toast.info("Crie sua conta para assinar o plano.");
+      navigate({ to: "/signup" });
+      return;
+    }
     setPending(plan);
     try {
       await subscribe({ data: { plan } });
@@ -79,9 +85,14 @@ function PlansPage() {
 
   const trialExpired = sub?.trial_expired;
   const isOnPaidPlan = sub?.status === "active" && (sub?.plan === "start" || sub?.plan === "infinit");
-  const canExtend = !isOnPaidPlan;
+  const canExtend = !session || !isOnPaidPlan;
 
   async function handleExtend() {
+    if (!session) {
+      toast.info("Crie sua conta grátis para ativar os 30 dias de teste.");
+      navigate({ to: "/signup" });
+      return;
+    }
     setExtending(true);
     try {
       await extend();
@@ -94,6 +105,9 @@ function PlansPage() {
       setExtending(false);
     }
   }
+
+  void authLoading;
+
 
   return (
     <div className="min-h-screen bg-secondary/30 pb-20">
