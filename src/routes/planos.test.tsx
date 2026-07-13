@@ -4,40 +4,54 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ---- Mocks ----
-const navigateMock = vi.fn();
+const h = vi.hoisted(() => ({
+  navigateMock: vi.fn(),
+  getSubscriptionMock: vi.fn(),
+  subscribeToPlanMock: vi.fn(),
+  extendTrialMock: vi.fn(),
+  useAuthMock: vi.fn(),
+  toastInfo: vi.fn(),
+  toastSuccess: vi.fn(),
+  toastError: vi.fn(),
+}));
+
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (opts: unknown) => opts,
   Link: ({ children, ...rest }: React.ComponentProps<"a">) => <a {...rest}>{children}</a>,
-  useNavigate: () => navigateMock,
+  useNavigate: () => h.navigateMock,
 }));
 
-// useServerFn returns the wrapped fn as-is so we can control it via billing.functions mock
 vi.mock("@tanstack/react-start", () => ({
   useServerFn: (fn: unknown) => fn,
 }));
 
-const getSubscriptionMock = vi.fn();
-const subscribeToPlanMock = vi.fn();
-const extendTrialMock = vi.fn();
 vi.mock("@/lib/billing.functions", () => ({
-  getSubscription: (...a: unknown[]) => getSubscriptionMock(...a),
-  subscribeToPlan: (...a: unknown[]) => subscribeToPlanMock(...a),
-  extendTrial: (...a: unknown[]) => extendTrialMock(...a),
+  getSubscription: (...a: unknown[]) => h.getSubscriptionMock(...a),
+  subscribeToPlan: (...a: unknown[]) => h.subscribeToPlanMock(...a),
+  extendTrial: (...a: unknown[]) => h.extendTrialMock(...a),
 }));
 
-const useAuthMock = vi.fn();
 vi.mock("@/hooks/use-auth", () => ({
-  useAuth: () => useAuthMock(),
+  useAuth: () => h.useAuthMock(),
 }));
 
 vi.mock("./index", () => ({ Logo: () => <span data-testid="logo" /> }));
 
-const toastInfo = vi.fn();
-const toastSuccess = vi.fn();
-const toastError = vi.fn();
 vi.mock("sonner", () => ({
-  toast: { info: toastInfo, success: toastSuccess, error: toastError },
+  toast: { info: h.toastInfo, success: h.toastSuccess, error: h.toastError },
 }));
+
+const {
+  navigateMock,
+  getSubscriptionMock,
+  subscribeToPlanMock: _subscribeToPlanMock,
+  extendTrialMock,
+  useAuthMock,
+  toastInfo,
+  toastSuccess,
+  toastError,
+} = h;
+
 
 // Import AFTER mocks are registered
 import { PlansPage } from "./planos";
