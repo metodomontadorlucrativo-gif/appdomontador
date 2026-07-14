@@ -112,8 +112,6 @@ function PlansPage() {
           <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm font-semibold text-destructive">
             Seu teste grátis terminou. Escolha um plano para continuar usando o TRENA.
           </div>
-        ) : sub?.status === "trialing" ? (
-          <TrialProgressCard sub={sub} />
         ) : null}
 
         <div className="mx-auto max-w-2xl text-center">
