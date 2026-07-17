@@ -449,6 +449,18 @@ function DashboardTab({
         />
       </div>
 
+      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block size-3 rounded-sm bg-success" /> Realizado
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block size-3 rounded-sm bg-brand/25" /> Projetado
+        </span>
+        <span className="flex items-center gap-1.5" aria-label="Projeção acima da meta" title="Projeção acima da meta">
+          <span className="text-sm" role="img" aria-label="foguinho">🔥</span> Projeção acima da meta
+        </span>
+      </div>
+
       {/* METRICS */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MetricCard label="Realizado (mês)" value={formatBRL(m.realizedMonth)} icon={TrendingUp} tone="success" />
@@ -581,7 +593,8 @@ function GoalProgress({
                 className="absolute -top-1 -translate-x-1/2 text-base leading-none animate-pulse"
                 style={{ left: "100%" }}
                 title={`Projeção ultrapassa a meta em ${formatBRL(projected - goal)}`}
-                aria-label="Projeção acima da meta"
+                role="img"
+                aria-label={`Projeção acima da meta em ${formatBRL(projected - goal)}`}
               >
                 🔥
               </span>
