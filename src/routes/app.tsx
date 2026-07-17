@@ -593,7 +593,8 @@ function GoalProgress({
                 className="absolute -top-1 -translate-x-1/2 text-base leading-none animate-pulse"
                 style={{ left: "100%" }}
                 title={`Projeção ultrapassa a meta em ${formatBRL(projected - goal)}`}
-                aria-label="Projeção acima da meta"
+                role="img"
+                aria-label={`Projeção acima da meta em ${formatBRL(projected - goal)}`}
               >
                 🔥
               </span>
