@@ -562,7 +562,14 @@ function GoalProgress({
         </button>
       ) : (
         <>
-          <div className="mt-4 relative h-3 rounded-full bg-muted">
+          <div
+            className={[
+              "mt-4 relative h-3 rounded-full bg-muted transition-shadow",
+              projected > goal
+                ? "ring-2 ring-warning/70 shadow-[0_0_12px_color-mix(in_oklab,var(--warning)_45%,transparent)]"
+                : "",
+            ].join(" ")}
+          >
             <div className="absolute inset-y-0 left-0 overflow-hidden rounded-full">
               <div className="relative h-full" style={{ width: "100%" }}>
                 <div className="absolute inset-y-0 left-0 bg-brand/25" style={{ width: `${projPct}%` }} />
