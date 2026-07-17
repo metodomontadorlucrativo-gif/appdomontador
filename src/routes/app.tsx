@@ -562,9 +562,23 @@ function GoalProgress({
         </button>
       ) : (
         <>
-          <div className="mt-4 relative h-3 overflow-hidden rounded-full bg-muted">
-            <div className="absolute inset-y-0 left-0 bg-brand/25" style={{ width: `${projPct}%` }} />
-            <div className="absolute inset-y-0 left-0 bg-success" style={{ width: `${realPct}%` }} />
+          <div className="mt-4 relative h-3 rounded-full bg-muted">
+            <div className="absolute inset-y-0 left-0 overflow-hidden rounded-full">
+              <div className="relative h-full" style={{ width: "100%" }}>
+                <div className="absolute inset-y-0 left-0 bg-brand/25" style={{ width: `${projPct}%` }} />
+                <div className="absolute inset-y-0 left-0 bg-success" style={{ width: `${realPct}%` }} />
+              </div>
+            </div>
+            {projected > goal && (
+              <span
+                className="absolute -top-1 -translate-x-1/2 text-base leading-none animate-pulse"
+                style={{ left: "100%" }}
+                title={`Projeção ultrapassa a meta em ${formatBRL(projected - goal)}`}
+                aria-label="Projeção acima da meta"
+              >
+                🔥
+              </span>
+            )}
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
             <div>
