@@ -560,6 +560,91 @@ function DashboardTab({
   );
 }
 
+function PastWeeksPanel({
+  weeks,
+  goal,
+}: {
+  weeks: {
+    key: string;
+    label: string;
+    range: string;
+    realized: number;
+    scheduled: number;
+    count: number;
+  }[];
+  goal: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? weeks : weeks.slice(0, 4);
+  const hasAny = weeks.some((w) => w.count > 0);
+
+  return (
+    <Panel title="Metas de semanas anteriores">
+      {!hasAny ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          Ainda não há semanas anteriores com serviços registrados.
+        </p>
+      ) : (
+        <>
+          <ul className="divide-y divide-border">
+            {visible.map((w) => {
+              const pct = goal > 0 ? Math.min(100, (w.realized / goal) * 100) : 0;
+              const diff = w.realized - goal;
+              const hit = goal > 0 && w.realized >= goal;
+              return (
+                <li key={w.key} className="flex flex-col gap-1.5 py-3">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{w.range}</span>
+                      <span className="text-[11px] text-muted-foreground">{w.label}</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="font-display text-sm font-bold">
+                        {formatBRL(w.realized)}
+                      </span>
+                      {goal > 0 ? (
+                        <span
+                          className={`text-[11px] font-semibold ${
+                            hit ? "text-success" : "text-muted-foreground"
+                          }`}
+                        >
+                          {hit
+                            ? `Meta batida 🎉 +${formatBRL(diff)}`
+                            : `Faltou ${formatBRL(Math.abs(diff))}`}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground">
+                          Sem meta definida
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="relative h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`absolute inset-y-0 left-0 rounded-full ${
+                        hit ? "bg-success" : "bg-brand"
+                      }`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {weeks.length > 4 && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="mt-3 w-full rounded-lg border border-border bg-background py-2 text-xs font-semibold text-muted-foreground hover:bg-muted"
+            >
+              {expanded ? "Mostrar menos" : `Ver todas (${weeks.length} semanas)`}
+            </button>
+          )}
+        </>
+      )}
+    </Panel>
+  );
+}
+
 function GoalProgress({
   title,
   icon,
