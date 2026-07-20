@@ -397,6 +397,41 @@ function DashboardTab({
     });
   }, [services, monthStart.getTime(), monthEnd.getTime()]);
 
+  // Semanas anteriores (excluindo a atual) para histórico de metas
+  const pastWeeks = useMemo(() => {
+    const arr: {
+      key: string;
+      label: string;
+      range: string;
+      realized: number;
+      scheduled: number;
+      count: number;
+    }[] = [];
+    for (let i = 1; i <= 12; i++) {
+      const ref = addWeeks(now, -i);
+      const ws = startOfWeek(ref, { weekStartsOn: 1 });
+      const we = endOfWeek(ref, { weekStartsOn: 1 });
+      const inRange = (s: Service) =>
+        isWithinInterval(serviceDate(s), { start: ws, end: we });
+      const weekServices = services.filter(inRange);
+      const realized = weekServices
+        .filter((s) => s.status === "completed")
+        .reduce((a, s) => a + servicePrice(s), 0);
+      const scheduled = weekServices
+        .filter((s) => s.status === "scheduled")
+        .reduce((a, s) => a + servicePrice(s), 0);
+      arr.push({
+        key: format(ws, "yyyy-MM-dd"),
+        label: `${format(ws, "dd/MM", { locale: ptBR })} – ${format(we, "dd/MM", { locale: ptBR })}`,
+        range: `Semana ${format(ws, "w", { locale: ptBR })}`,
+        realized,
+        scheduled,
+        count: weekServices.length,
+      });
+    }
+    return arr;
+  }, [services, weekStart.getTime()]);
+
   const todayWeeklyIdx = eachDayOfInterval({ start: weekStart, end: weekEnd }).findIndex(
     (d) => isSameDay(d, now),
   );
