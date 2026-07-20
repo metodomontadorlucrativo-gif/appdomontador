@@ -551,6 +551,8 @@ function DashboardTab({
         </Panel>
       </div>
 
+      <PastWeeksPanel weeks={pastWeeks} goal={goals.weekly} />
+
       {editGoals && (
         <GoalsForm initial={goals} onClose={() => setEditGoals(false)} onSave={setGoals} />
       )}
