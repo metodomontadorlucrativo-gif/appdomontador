@@ -69,9 +69,10 @@ function PlansPage() {
   async function handleExtend() {
     setExtending(true);
     try {
-      await extend();
-      toast.success("Teste grátis de 30 dias liberado!");
+      const updated = await extend();
+      qc.setQueryData(["subscription"], updated);
       await qc.invalidateQueries({ queryKey: ["subscription"] });
+      toast.success("Teste grátis de 30 dias liberado!");
       navigate({ to: "/app" });
     } catch (err: any) {
       toast.error(err?.message ?? "Não foi possível estender o teste");
