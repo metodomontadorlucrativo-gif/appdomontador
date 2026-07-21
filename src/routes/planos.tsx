@@ -47,13 +47,14 @@ function PlansPage() {
   async function handleSubscribe(plan: "start" | "infinit") {
     setPending(plan);
     try {
-      await subscribe({ data: { plan } });
+      const updated = await subscribe({ data: { plan } });
+      qc.setQueryData(["subscription"], updated);
+      await qc.invalidateQueries({ queryKey: ["subscription"] });
       toast.success(
         plan === "start"
           ? "Plano Start ativado! (cobrança real em breve)"
           : "Plano Infinit ativado! (cobrança real em breve)",
       );
-      await qc.invalidateQueries({ queryKey: ["subscription"] });
       navigate({ to: "/assinatura" });
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao ativar plano");
