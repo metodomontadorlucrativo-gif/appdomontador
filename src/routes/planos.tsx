@@ -47,13 +47,14 @@ function PlansPage() {
   async function handleSubscribe(plan: "start" | "infinit") {
     setPending(plan);
     try {
-      await subscribe({ data: { plan } });
+      const updated = await subscribe({ data: { plan } });
+      qc.setQueryData(["subscription"], updated);
+      await qc.invalidateQueries({ queryKey: ["subscription"] });
       toast.success(
         plan === "start"
           ? "Plano Start ativado! (cobrança real em breve)"
           : "Plano Infinit ativado! (cobrança real em breve)",
       );
-      await qc.invalidateQueries({ queryKey: ["subscription"] });
       navigate({ to: "/assinatura" });
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao ativar plano");
@@ -69,9 +70,10 @@ function PlansPage() {
   async function handleExtend() {
     setExtending(true);
     try {
-      await extend();
-      toast.success("Teste grátis de 30 dias liberado!");
+      const updated = await extend();
+      qc.setQueryData(["subscription"], updated);
       await qc.invalidateQueries({ queryKey: ["subscription"] });
+      toast.success("Teste grátis de 30 dias liberado!");
       navigate({ to: "/app" });
     } catch (err: any) {
       toast.error(err?.message ?? "Não foi possível estender o teste");
