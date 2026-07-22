@@ -45,7 +45,17 @@ import {
 import { Logo } from "./index";
 
 export const Route = createFileRoute("/app")({
-  head: () => ({ meta: [{ title: "Dashboard — TRENA" }] }),
+  head: () => ({
+    meta: [
+      { title: "Dashboard — TRENA" },
+      { name: "description", content: "Seu painel TRENA: acompanhe faturamento, despesas, metas e lucro em tempo real." },
+      { property: "og:title", content: "Dashboard — TRENA" },
+      { property: "og:description", content: "Acompanhe faturamento, despesas, metas e lucro em tempo real." },
+      { property: "og:url", content: "https://appdomontador.lovable.app/app" },
+      { name: "robots", content: "noindex, follow" },
+    ],
+    links: [{ rel: "canonical", href: "https://appdomontador.lovable.app/app" }],
+  }),
   component: AppDashboard,
 });
 

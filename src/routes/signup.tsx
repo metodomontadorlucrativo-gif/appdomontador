@@ -7,7 +7,17 @@ import { Logo } from "./index";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/signup")({
-  head: () => ({ meta: [{ title: "Criar conta — TRENA" }] }),
+  head: () => ({
+    meta: [
+      { title: "Criar conta — TRENA" },
+      { name: "description", content: "Crie sua conta TRENA grátis e comece a controlar ganhos, despesas e metas do seu negócio autônomo em minutos." },
+      { property: "og:title", content: "Criar conta — TRENA" },
+      { property: "og:description", content: "Crie sua conta TRENA grátis e comece em minutos." },
+      { property: "og:url", content: "https://appdomontador.lovable.app/signup" },
+      { name: "robots", content: "noindex, follow" },
+    ],
+    links: [{ rel: "canonical", href: "https://appdomontador.lovable.app/signup" }],
+  }),
   component: SignupPage,
 });
 

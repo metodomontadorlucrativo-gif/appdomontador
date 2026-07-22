@@ -8,7 +8,17 @@ import { cancelSubscription, getSubscription } from "@/lib/billing.functions";
 import { Logo } from "./index";
 
 export const Route = createFileRoute("/assinatura")({
-  head: () => ({ meta: [{ title: "Minha assinatura — TRENA" }] }),
+  head: () => ({
+    meta: [
+      { title: "Minha assinatura — TRENA" },
+      { name: "description", content: "Gerencie sua assinatura TRENA: plano atual, período de teste, cobrança e cancelamento." },
+      { property: "og:title", content: "Minha assinatura — TRENA" },
+      { property: "og:description", content: "Gerencie plano, cobrança e cancelamento da sua assinatura TRENA." },
+      { property: "og:url", content: "https://appdomontador.lovable.app/assinatura" },
+      { name: "robots", content: "noindex, follow" },
+    ],
+    links: [{ rel: "canonical", href: "https://appdomontador.lovable.app/assinatura" }],
+  }),
   component: SubscriptionPage,
 });
 

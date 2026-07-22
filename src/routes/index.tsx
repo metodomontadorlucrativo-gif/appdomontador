@@ -4,25 +4,86 @@ import { ArrowRight, BarChart3, Trophy, Zap, CheckCircle2, Target, Smartphone, T
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "TRENA — Controle financeiro gamificado para montadores e autônomos" },
+      { title: "TRENA — Financeiro gamificado para autônomos" },
       {
         name: "description",
         content:
-          "App mobile-first para montadores, eletricistas e profissionais autônomos controlarem despesas, faturamento e produtividade. Suba de nível, bata metas e veja seu lucro real.",
+          "App mobile-first para montadores e autônomos controlarem despesas, faturamento e lucro. Suba de nível e bata metas.",
       },
-      {
-        property: "og:title",
-        content: "TRENA — Sua trena financeira gamificada",
-      },
+      { property: "og:title", content: "TRENA — Sua trena financeira gamificada" },
       {
         property: "og:description",
         content:
           "Controle ganhos, despesas e produtividade. Gamificado, mobile-first, simples. Comece grátis.",
       },
+      { property: "og:url", content: "https://appdomontador.lovable.app/" },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7b04f66f-f8d0-4b06-986f-3024595d4224/id-preview-43be2383--019034f5-c585-4f4d-80d6-6440aad5a39b.lovable.app-1778721564565.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7b04f66f-f8d0-4b06-986f-3024595d4224/id-preview-43be2383--019034f5-c585-4f4d-80d6-6440aad5a39b.lovable.app-1778721564565.png",
+      },
+    ],
+    links: [{ rel: "canonical", href: "https://appdomontador.lovable.app/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "Preciso de cartão de crédito para começar?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Não. O plano Free é totalmente gratuito e sem prazo. Use à vontade e suba para o Pro só quando quiser mais.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Funciona em qualquer celular?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Sim. TRENA é um app web mobile-first que funciona em qualquer celular Android ou iPhone, sem precisar instalar de loja.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Sirvo para quais profissões?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Montadores de móveis, eletricistas, encanadores, técnicos de instalação, pintores, marceneiros, jardineiros — qualquer autônomo que faz serviços por agendamento.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Meus dados ficam seguros?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Sim. Toda informação fica protegida na sua conta com regras de acesso por usuário. Só você vê seus dados.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Posso cancelar quando quiser?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Sim, sem multa, sem fidelidade. Cancela com um clique e mantém acesso até o fim do período pago.",
+              },
+            },
+          ],
+        }),
+      },
     ],
   }),
   component: LandingPage,
 });
+
 
 function LandingPage() {
   return (
