@@ -11,13 +11,21 @@ import { Logo } from "./index";
 export const Route = createFileRoute("/planos")({
   head: () => ({
     meta: [
-      { title: "Planos — TRENA" },
+      { title: "Planos e preços — TRENA" },
       {
         name: "description",
         content:
-          "Escolha o plano que se encaixa no seu momento: Start a partir de R$ 27,90 ou Infinit R$ 19,90.",
+          "Escolha o plano TRENA: Start a partir de R$ 27,90/mês ou Infinit R$ 19,90/mês. Teste grátis por 30 dias.",
       },
+      { property: "og:title", content: "Planos e preços — TRENA" },
+      {
+        property: "og:description",
+        content:
+          "Start a partir de R$ 27,90/mês ou Infinit R$ 19,90/mês. Teste grátis por 30 dias.",
+      },
+      { property: "og:url", content: "https://appdomontador.lovable.app/planos" },
     ],
+    links: [{ rel: "canonical", href: "https://appdomontador.lovable.app/planos" }],
   }),
   component: PlansPage,
 });
