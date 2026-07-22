@@ -1051,6 +1051,7 @@ function ServicesTab({
   setServices: React.Dispatch<React.SetStateAction<Service[]>>;
 }) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Service | null>(null);
   const [filter, setFilter] = useState<ServiceFilter>("all");
 
   const now = new Date();
@@ -1155,6 +1156,13 @@ function ServicesTab({
                       </button>
                     )}
                     <button
+                      onClick={() => setEditing(s)}
+                      className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                      aria-label="Editar"
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                    <button
                       onClick={() => setServices((p) => p.filter((x) => x.id !== s.id))}
                       className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       aria-label="Excluir"
@@ -1177,6 +1185,17 @@ function ServicesTab({
           }}
         />
       )}
+
+      {editing && (
+        <ServiceForm
+          initial={editing}
+          onClose={() => setEditing(null)}
+          onSave={(s) => {
+            setServices((p) => p.map((x) => (x.id === s.id ? s : x)));
+            setEditing(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1184,35 +1203,40 @@ function ServicesTab({
 function ServiceForm({
   onClose,
   onSave,
+  initial,
 }: {
   onClose: () => void;
   onSave: (s: Service) => void;
+  initial?: Service;
 }) {
-  const [client, setClient] = useState("");
-  const [type, setType] = useState("");
-  const [price, setPrice] = useState("");
-  const [date, setDate] = useState(todayISO());
-  const [period, setPeriod] = useState<ServicePeriod>("month");
+  const [client, setClient] = useState(initial?.client_name ?? "");
+  const [type, setType] = useState(initial?.service_type ?? "");
+  const [price, setPrice] = useState(
+    initial ? String(initial.agreed_price ?? "") : "",
+  );
+  const [date, setDate] = useState(initial?.date ?? todayISO());
+  const [period, setPeriod] = useState<ServicePeriod>(initial?.period ?? "month");
 
   const valid = client.trim() && type.trim() && Number(price) > 0 && date;
+  const isEdit = !!initial;
 
   return (
-    <Modal onClose={onClose} title="Novo serviço">
+    <Modal onClose={onClose} title={isEdit ? "Editar serviço" : "Novo serviço"}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
           if (!valid) return;
           onSave({
-            id: uid(),
+            id: initial?.id ?? uid(),
             client_name: client.trim(),
             service_type: type.trim(),
             agreed_price: Number(price),
-            received_price: null,
-            status: "scheduled",
+            received_price: initial?.received_price ?? null,
+            status: initial?.status ?? "scheduled",
             date,
             period,
             scheduled_at: new Date(date + "T08:00:00").toISOString(),
-            created_at: new Date().toISOString(),
+            created_at: initial?.created_at ?? new Date().toISOString(),
           });
         }}
         className="space-y-4"
