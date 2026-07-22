@@ -1051,6 +1051,7 @@ function ServicesTab({
   setServices: React.Dispatch<React.SetStateAction<Service[]>>;
 }) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Service | null>(null);
   const [filter, setFilter] = useState<ServiceFilter>("all");
 
   const now = new Date();
