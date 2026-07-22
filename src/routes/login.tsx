@@ -7,7 +7,17 @@ import { Logo } from "./index";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Entrar — TRENA" }] }),
+  head: () => ({
+    meta: [
+      { title: "Entrar — TRENA" },
+      { name: "description", content: "Acesse sua conta TRENA e continue controlando ganhos, despesas e metas do seu negócio autônomo." },
+      { property: "og:title", content: "Entrar — TRENA" },
+      { property: "og:description", content: "Acesse sua conta TRENA e continue controlando seu negócio." },
+      { property: "og:url", content: "https://appdomontador.lovable.app/login" },
+      { name: "robots", content: "noindex, follow" },
+    ],
+    links: [{ rel: "canonical", href: "https://appdomontador.lovable.app/login" }],
+  }),
   component: LoginPage,
 });
 
