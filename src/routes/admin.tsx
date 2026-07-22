@@ -27,7 +27,17 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
-  head: () => ({ meta: [{ title: "Admin — TRENA" }] }),
+  head: () => ({
+    meta: [
+      { title: "Admin — TRENA" },
+      { name: "description", content: "Painel administrativo TRENA: gestão de usuários, planos e acesso gratuito." },
+      { property: "og:title", content: "Admin — TRENA" },
+      { property: "og:description", content: "Painel administrativo TRENA." },
+      { property: "og:url", content: "https://appdomontador.lovable.app/admin" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+    links: [{ rel: "canonical", href: "https://appdomontador.lovable.app/admin" }],
+  }),
   component: AdminPage,
 });
 

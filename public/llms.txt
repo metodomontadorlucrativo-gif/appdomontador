@@ -1,0 +1,10 @@
+# TRENA
+
+> Plataforma gamificada de controle financeiro para montadores e profissionais autônomos: ganhos, despesas, metas e lucro real em tempo real.
+
+TRENA é um microSaaS mobile-first que ajuda montadores, eletricistas, encanadores, marceneiros e outros autônomos a organizarem sua vida financeira com gamificação — níveis, conquistas e metas.
+
+## Pages
+
+- [Home](/): Visão geral do produto, benefícios, como funciona e FAQ.
+- [Planos](/planos): Planos, preços e período de teste.

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /app
+Disallow: /assinatura
+
+Sitemap: https://appdomontador.lovable.app/sitemap.xml
