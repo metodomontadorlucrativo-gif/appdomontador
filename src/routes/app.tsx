@@ -1156,6 +1156,13 @@ function ServicesTab({
                       </button>
                     )}
                     <button
+                      onClick={() => setEditing(s)}
+                      className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                      aria-label="Editar"
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                    <button
                       onClick={() => setServices((p) => p.filter((x) => x.id !== s.id))}
                       className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       aria-label="Excluir"
@@ -1175,6 +1182,17 @@ function ServicesTab({
           onSave={(s) => {
             setServices((p) => [s, ...p]);
             setOpen(false);
+          }}
+        />
+      )}
+
+      {editing && (
+        <ServiceForm
+          initial={editing}
+          onClose={() => setEditing(null)}
+          onSave={(s) => {
+            setServices((p) => p.map((x) => (x.id === s.id ? s : x)));
+            setEditing(null);
           }}
         />
       )}
