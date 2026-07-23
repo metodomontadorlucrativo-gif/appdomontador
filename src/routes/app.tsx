@@ -1322,6 +1322,7 @@ function ExpensesTab({
   setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
 }) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Expense | null>(null);
 
   return (
     <div className="space-y-4">
@@ -1333,7 +1334,10 @@ function ExpensesTab({
           </p>
         </div>
         <button
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setEditing(null);
+            setOpen(true);
+          }}
           className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="size-4" /> Nova
@@ -1370,6 +1374,16 @@ function ExpensesTab({
                     -{formatBRL(Number(e.amount))}
                   </div>
                   <button
+                    onClick={() => {
+                      setEditing(e);
+                      setOpen(true);
+                    }}
+                    className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-brand/10 hover:text-brand-dark"
+                    aria-label="Editar"
+                  >
+                    <Pencil className="size-4" />
+                  </button>
+                  <button
                     onClick={() => setExpenses((p) => p.filter((x) => x.id !== e.id))}
                     className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     aria-label="Excluir"
@@ -1384,10 +1398,18 @@ function ExpensesTab({
 
       {open && (
         <ExpenseForm
-          onClose={() => setOpen(false)}
-          onSave={(e) => {
-            setExpenses((p) => [e, ...p]);
+          initial={editing}
+          onClose={() => {
             setOpen(false);
+            setEditing(null);
+          }}
+          onSave={(e) => {
+            setExpenses((p) => {
+              const exists = p.some((x) => x.id === e.id);
+              return exists ? p.map((x) => (x.id === e.id ? e : x)) : [e, ...p];
+            });
+            setOpen(false);
+            setEditing(null);
           }}
         />
       )}
@@ -1396,34 +1418,37 @@ function ExpensesTab({
 }
 
 function ExpenseForm({
+  initial,
   onClose,
   onSave,
 }: {
+  initial?: Expense | null;
   onClose: () => void;
   onSave: (e: Expense) => void;
 }) {
-  const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState<ExpenseCategory>("combustivel");
-  const [description, setDescription] = useState("");
-  const [date, setDate] = useState(todayISO());
+  const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
+  const [category, setCategory] = useState<ExpenseCategory>(initial?.category ?? "combustivel");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [date, setDate] = useState(initial?.occurred_at ?? todayISO());
 
   const valid = Number(amount) > 0;
 
   return (
-    <Modal onClose={onClose} title="Nova despesa">
+    <Modal onClose={onClose} title={initial ? "Editar despesa" : "Nova despesa"}>
       <form
         onSubmit={(ev) => {
           ev.preventDefault();
           if (!valid) return;
           onSave({
-            id: uid(),
+            id: initial?.id ?? uid(),
             amount: Number(amount),
             category,
             description: description.trim() || null,
             occurred_at: date,
-            created_at: new Date().toISOString(),
+            created_at: initial?.created_at ?? new Date().toISOString(),
           });
         }}
+
         className="space-y-4"
       >
         <Field label="Valor (R$)">
