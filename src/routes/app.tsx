@@ -153,13 +153,9 @@ function AppDashboard() {
     enabled: !!user,
   });
 
-  useEffect(() => {
-    if (roleLoading) return;
-    if (isAdmin) return;
-    if (sub?.trial_expired) {
-      navigate({ to: "/planos" });
-    }
-  }, [sub?.trial_expired, navigate, isAdmin, roleLoading]);
+  // MODO BETA: acesso liberado para todos, sem bloqueio por trial/assinatura.
+  void sub;
+  void roleLoading;
 
 
   useEffect(() => {
