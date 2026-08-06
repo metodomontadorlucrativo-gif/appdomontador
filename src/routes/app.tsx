@@ -193,6 +193,8 @@ function AppDashboard() {
           <div className="flex items-center gap-2">
             <span className="hidden rounded-full bg-brand/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-dark sm:inline">
               Beta grátis
+            </span>
+
 
             {user ? (
               <>
