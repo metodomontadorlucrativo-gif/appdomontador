@@ -153,13 +153,9 @@ function AppDashboard() {
     enabled: !!user,
   });
 
-  useEffect(() => {
-    if (roleLoading) return;
-    if (isAdmin) return;
-    if (sub?.trial_expired) {
-      navigate({ to: "/planos" });
-    }
-  }, [sub?.trial_expired, navigate, isAdmin, roleLoading]);
+  // MODO BETA: acesso liberado para todos, sem bloqueio por trial/assinatura.
+  void sub;
+  void roleLoading;
 
 
   useEffect(() => {
@@ -196,8 +192,10 @@ function AppDashboard() {
           </Link>
           <div className="flex items-center gap-2">
             <span className="hidden rounded-full bg-brand/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-dark sm:inline">
-              Modo demo
+              Beta grátis
             </span>
+
+
             {user ? (
               <>
                 {isAdmin && (
