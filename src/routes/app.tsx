@@ -1,9 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { getSubscription } from "@/lib/billing.functions";
-import { TrialBanner } from "@/components/TrialBanner";
 import {
   BarChart3,
   Briefcase,
@@ -51,7 +47,9 @@ export const Route = createFileRoute("/app")({
       { name: "description", content: "Seu painel TRENA: acompanhe faturamento, despesas, metas e lucro em tempo real." },
       { property: "og:title", content: "Dashboard — TRENA" },
       { property: "og:description", content: "Acompanhe faturamento, despesas, metas e lucro em tempo real." },
+      { property: "og:type", content: "website" },
       { property: "og:url", content: "https://appdomontador.lovable.app/app" },
+      { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex, follow" },
     ],
     links: [{ rel: "canonical", href: "https://appdomontador.lovable.app/app" }],
@@ -59,7 +57,7 @@ export const Route = createFileRoute("/app")({
   component: AppDashboard,
 });
 
-/* ----------------------------- Types & storage ---------------------------- */
+/* --------------------------------- Types --------------------------------- */
 
 type ServicePeriod = "day" | "week" | "month";
 
@@ -89,23 +87,6 @@ type Expense = {
 
 type Goals = { weekly: number; monthly: number };
 
-const SERVICES_KEY = "trena.services.v1";
-const EXPENSES_KEY = "trena.expenses.v1";
-const GOALS_KEY = "trena.goals.v1";
-
-function loadLS<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-function saveLS<T>(key: string, value: T) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(value));
-}
 const uid = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -138,49 +119,182 @@ function servicePrice(s: Service): number {
 type Tab = "dashboard" | "services" | "expenses";
 
 function AppDashboard() {
-  const { user, isAdmin, roleLoading } = useAuth();
+  const { user, loading: authLoading, isAdmin, roleLoading } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("dashboard");
   const [services, setServices] = useState<Service[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [goals, setGoals] = useState<Goals>({ weekly: 0, monthly: 0 });
-  const [hydrated, setHydrated] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
 
-  const fetchSub = useServerFn(getSubscription);
-  const { data: sub } = useQuery({
-    queryKey: ["subscription"],
-    queryFn: () => fetchSub(),
-    enabled: !!user,
-  });
-
-  // MODO BETA: acesso liberado para todos, sem bloqueio por trial/assinatura.
-  void sub;
   void roleLoading;
 
+  useEffect(() => {
+    if (!authLoading && !user) navigate({ to: "/login", replace: true });
+  }, [authLoading, navigate, user]);
 
   useEffect(() => {
-    const raw = loadLS<Service[]>(SERVICES_KEY, []);
-    // migrate legacy services without date/period
-    const migrated = raw.map((s) => ({
-      ...s,
-      date: s.date ?? (s.scheduled_at?.slice(0, 10) || s.created_at.slice(0, 10)),
-      period: s.period ?? "month",
-    }));
-    setServices(migrated);
-    setExpenses(loadLS<Expense[]>(EXPENSES_KEY, []));
-    setGoals(loadLS<Goals>(GOALS_KEY, { weekly: 0, monthly: 0 }));
-    setHydrated(true);
-  }, []);
+    if (!user) return;
+    let active = true;
+    const loadData = async () => {
+      setDataLoading(true);
+      setDataError(null);
+      const today = todayISO();
+      const [servicesResult, expensesResult, goalsResult] = await Promise.all([
+        supabase.from("services").select("*").order("scheduled_at", { ascending: false }),
+        supabase.from("expenses").select("*").order("occurred_at", { ascending: false }),
+        supabase
+          .from("goals")
+          .select("*")
+          .eq("type", "revenue")
+          .lte("starts_at", today)
+          .gte("ends_at", today)
+          .order("created_at", { ascending: false }),
+      ]);
+      if (!active) return;
+      const error = servicesResult.error ?? expensesResult.error ?? goalsResult.error;
+      if (error) {
+        setDataError("Não foi possível carregar seus dados.");
+      } else {
+        setServices(
+          (servicesResult.data ?? []).map((service) => ({
+            ...service,
+            date: service.scheduled_at?.slice(0, 10) ?? service.created_at.slice(0, 10),
+          })),
+        );
+        setExpenses(expensesResult.data ?? []);
+        const weekGoal = goalsResult.data?.find((goal) => goal.period === "week");
+        const monthGoal = goalsResult.data?.find((goal) => goal.period === "month");
+        setGoals({
+          weekly: Number(weekGoal?.target_value ?? 0),
+          monthly: Number(monthGoal?.target_value ?? 0),
+        });
+      }
+      setDataLoading(false);
+    };
+    void loadData();
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
-  useEffect(() => {
-    if (hydrated) saveLS(SERVICES_KEY, services);
-  }, [services, hydrated]);
-  useEffect(() => {
-    if (hydrated) saveLS(EXPENSES_KEY, expenses);
-  }, [expenses, hydrated]);
-  useEffect(() => {
-    if (hydrated) saveLS(GOALS_KEY, goals);
-  }, [goals, hydrated]);
+  const showDataError = () => setDataError("Não foi possível salvar a alteração. Tente novamente.");
+
+  const saveService = async (service: Service, editing: boolean) => {
+    if (!user) return false;
+    const payload = {
+      client_name: service.client_name,
+      service_type: service.service_type,
+      agreed_price: service.agreed_price,
+      received_price: service.received_price,
+      status: service.status,
+      scheduled_at: service.scheduled_at,
+      period: service.period,
+    };
+    const result = editing
+      ? await supabase.from("services").update(payload).eq("id", service.id).select().single()
+      : await supabase.from("services").insert({ ...payload, id: service.id, user_id: user.id }).select().single();
+    if (result.error) {
+      showDataError();
+      return false;
+    }
+    const saved = { ...result.data, date: result.data.scheduled_at?.slice(0, 10) ?? result.data.created_at.slice(0, 10) };
+    setServices((current) =>
+      editing ? current.map((item) => (item.id === saved.id ? saved : item)) : [saved, ...current],
+    );
+    return true;
+  };
+
+  const completeServiceRecord = async (service: Service) => {
+    const receivedPrice = service.received_price ?? service.agreed_price;
+    const { data, error } = await supabase
+      .from("services")
+      .update({ status: "completed", received_price: receivedPrice, completed_at: new Date().toISOString() })
+      .eq("id", service.id)
+      .select()
+      .single();
+    if (error) return showDataError();
+    setServices((current) =>
+      current.map((item) => item.id === service.id ? { ...data, date: data.scheduled_at?.slice(0, 10) ?? data.created_at.slice(0, 10) } : item),
+    );
+  };
+
+  const deleteServiceRecord = async (id: string) => {
+    const { error } = await supabase.from("services").delete().eq("id", id);
+    if (error) return showDataError();
+    setServices((current) => current.filter((item) => item.id !== id));
+  };
+
+  const saveExpense = async (expense: Expense, editing: boolean) => {
+    if (!user) return false;
+    const payload = {
+      amount: expense.amount,
+      category: expense.category,
+      description: expense.description,
+      occurred_at: expense.occurred_at,
+    };
+    const result = editing
+      ? await supabase.from("expenses").update(payload).eq("id", expense.id).select().single()
+      : await supabase.from("expenses").insert({ ...payload, id: expense.id, user_id: user.id }).select().single();
+    if (result.error) {
+      showDataError();
+      return false;
+    }
+    setExpenses((current) =>
+      editing ? current.map((item) => (item.id === result.data.id ? result.data : item)) : [result.data, ...current],
+    );
+    return true;
+  };
+
+  const deleteExpenseRecord = async (id: string) => {
+    const { error } = await supabase.from("expenses").delete().eq("id", id);
+    if (error) return showDataError();
+    setExpenses((current) => current.filter((item) => item.id !== id));
+  };
+
+  const saveGoals = async (nextGoals: Goals) => {
+    if (!user) return false;
+    const now = new Date();
+    const periods = [
+      { period: "week" as const, value: nextGoals.weekly, start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) },
+      { period: "month" as const, value: nextGoals.monthly, start: startOfMonth(now), end: endOfMonth(now) },
+    ];
+    for (const item of periods) {
+      const startsAt = format(item.start, "yyyy-MM-dd");
+      const endsAt = format(item.end, "yyyy-MM-dd");
+      const { error: deleteError } = await supabase
+        .from("goals")
+        .delete()
+        .eq("type", "revenue")
+        .eq("period", item.period)
+        .eq("starts_at", startsAt);
+      if (deleteError) {
+        showDataError();
+        return false;
+      }
+      if (item.value > 0) {
+        const { error: insertError } = await supabase.from("goals").insert({
+          user_id: user.id,
+          type: "revenue",
+          period: item.period,
+          target_value: item.value,
+          starts_at: startsAt,
+          ends_at: endsAt,
+        });
+        if (insertError) {
+          showDataError();
+          return false;
+        }
+      }
+    }
+    setGoals(nextGoals);
+    return true;
+  };
+
+  if (authLoading || (!user && !authLoading) || dataLoading) {
+    return <div className="grid min-h-screen place-items-center bg-secondary/30 text-sm font-semibold text-muted-foreground">Carregando seus dados…</div>;
+  }
 
   return (
     <div className="min-h-screen bg-secondary/30 pb-24">
@@ -249,19 +363,30 @@ function AppDashboard() {
 
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        {dataError && (
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            <span>{dataError}</span>
+            <button onClick={() => window.location.reload()} className="font-bold underline">Tentar novamente</button>
+          </div>
+        )}
         {tab === "dashboard" && (
           <DashboardTab
             services={services}
             expenses={expenses}
             goals={goals}
-            setGoals={setGoals}
+            onSaveGoals={saveGoals}
           />
         )}
         {tab === "services" && (
-          <ServicesTab services={services} setServices={setServices} />
+          <ServicesTab
+            services={services}
+            onSave={saveService}
+            onComplete={completeServiceRecord}
+            onDelete={deleteServiceRecord}
+          />
         )}
         {tab === "expenses" && (
-          <ExpensesTab expenses={expenses} setExpenses={setExpenses} />
+          <ExpensesTab expenses={expenses} onSave={saveExpense} onDelete={deleteExpenseRecord} />
         )}
       </main>
     </div>
@@ -299,12 +424,12 @@ function DashboardTab({
   services,
   expenses,
   goals,
-  setGoals,
+  onSaveGoals,
 }: {
   services: Service[];
   expenses: Expense[];
   goals: Goals;
-  setGoals: React.Dispatch<React.SetStateAction<Goals>>;
+  onSaveGoals: (goals: Goals) => Promise<boolean>;
 }) {
   const [editGoals, setEditGoals] = useState(false);
 
@@ -562,7 +687,7 @@ function DashboardTab({
       <PastWeeksPanel weeks={pastWeeks} goal={goals.weekly} />
 
       {editGoals && (
-        <GoalsForm initial={goals} onClose={() => setEditGoals(false)} onSave={setGoals} />
+        <GoalsForm initial={goals} onClose={() => setEditGoals(false)} onSave={onSaveGoals} />
       )}
     </div>
   );

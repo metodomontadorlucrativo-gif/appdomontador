@@ -257,6 +257,7 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
+          period: Database["public"]["Enums"]["service_period"]
           received_price: number | null
           scheduled_at: string | null
           service_type: string
@@ -272,6 +273,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          period?: Database["public"]["Enums"]["service_period"]
           received_price?: number | null
           scheduled_at?: string | null
           service_type: string
@@ -287,6 +289,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          period?: Database["public"]["Enums"]["service_period"]
           received_price?: number | null
           scheduled_at?: string | null
           service_type?: string
@@ -408,6 +411,7 @@ export type Database = {
         | "outros"
       goal_period: "week" | "month"
       goal_type: "revenue" | "profit" | "services_count"
+      service_period: "day" | "week" | "month"
       service_status: "scheduled" | "in_progress" | "completed" | "cancelled"
     }
     CompositeTypes: {
@@ -550,6 +554,7 @@ export const Constants = {
       ],
       goal_period: ["week", "month"],
       goal_type: ["revenue", "profit", "services_count"],
+      service_period: ["day", "week", "month"],
       service_status: ["scheduled", "in_progress", "completed", "cancelled"],
     },
   },
