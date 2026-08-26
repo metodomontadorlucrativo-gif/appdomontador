@@ -1058,7 +1058,7 @@ function GoalsForm({
 }: {
   initial: Goals;
   onClose: () => void;
-  onSave: (g: Goals) => void;
+  onSave: (g: Goals) => Promise<boolean>;
 }) {
   const [weekly, setWeekly] = useState(String(initial.weekly || ""));
   const [monthly, setMonthly] = useState(String(initial.monthly || ""));
@@ -1088,10 +1088,10 @@ function GoalsForm({
   return (
     <Modal onClose={onClose} title="Suas metas de ganho">
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          onSave({ weekly: parseBR(weekly), monthly: parseBR(monthly) });
-          onClose();
+          const saved = await onSave({ weekly: parseBR(weekly), monthly: parseBR(monthly) });
+          if (saved) onClose();
         }}
         className="space-y-4"
       >
@@ -1178,10 +1178,14 @@ type ServiceFilter = "week" | "month" | "all";
 
 function ServicesTab({
   services,
-  setServices,
+  onSave,
+  onComplete,
+  onDelete,
 }: {
   services: Service[];
-  setServices: React.Dispatch<React.SetStateAction<Service[]>>;
+  onSave: (service: Service, editing: boolean) => Promise<boolean>;
+  onComplete: (service: Service) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
@@ -1270,19 +1274,7 @@ function ServicesTab({
                   <div className="flex items-center gap-2">
                     {s.status !== "completed" && s.status !== "cancelled" && (
                       <button
-                        onClick={() =>
-                          setServices((prev) =>
-                            prev.map((x) =>
-                              x.id === s.id
-                                ? {
-                                    ...x,
-                                    status: "completed",
-                                    received_price: x.received_price ?? x.agreed_price,
-                                  }
-                                : x,
-                            ),
-                          )
-                        }
+                        onClick={() => void onComplete(s)}
                         className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success hover:bg-success/20"
                       >
                         <CheckCircle2 className="size-3.5" /> Concluir
@@ -1296,7 +1288,7 @@ function ServicesTab({
                       <Pencil className="size-4" />
                     </button>
                     <button
-                      onClick={() => setServices((p) => p.filter((x) => x.id !== s.id))}
+                      onClick={() => void onDelete(s.id)}
                       className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       aria-label="Excluir"
                     >
@@ -1312,9 +1304,9 @@ function ServicesTab({
       {open && (
         <ServiceForm
           onClose={() => setOpen(false)}
-          onSave={(s) => {
-            setServices((p) => [s, ...p]);
-            setOpen(false);
+          onSave={async (s) => {
+            const saved = await onSave(s, false);
+            if (saved) setOpen(false);
           }}
         />
       )}
@@ -1323,9 +1315,9 @@ function ServicesTab({
         <ServiceForm
           initial={editing}
           onClose={() => setEditing(null)}
-          onSave={(s) => {
-            setServices((p) => p.map((x) => (x.id === s.id ? s : x)));
-            setEditing(null);
+          onSave={async (s) => {
+            const saved = await onSave(s, true);
+            if (saved) setEditing(null);
           }}
         />
       )}
@@ -1339,7 +1331,7 @@ function ServiceForm({
   initial,
 }: {
   onClose: () => void;
-  onSave: (s: Service) => void;
+  onSave: (s: Service) => Promise<void>;
   initial?: Service;
 }) {
   const [client, setClient] = useState(initial?.client_name ?? "");
@@ -1356,10 +1348,10 @@ function ServiceForm({
   return (
     <Modal onClose={onClose} title={isEdit ? "Editar serviço" : "Novo serviço"}>
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           if (!valid) return;
-          onSave({
+          await onSave({
             id: initial?.id ?? uid(),
             client_name: client.trim(),
             service_type: type.trim(),
@@ -1439,10 +1431,12 @@ function ServiceForm({
 
 function ExpensesTab({
   expenses,
-  setExpenses,
+  onSave,
+  onDelete,
 }: {
   expenses: Expense[];
-  setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
+  onSave: (expense: Expense, editing: boolean) => Promise<boolean>;
+  onDelete: (id: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
@@ -1507,7 +1501,7 @@ function ExpensesTab({
                     <Pencil className="size-4" />
                   </button>
                   <button
-                    onClick={() => setExpenses((p) => p.filter((x) => x.id !== e.id))}
+                    onClick={() => void onDelete(e.id)}
                     className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     aria-label="Excluir"
                   >
@@ -1526,13 +1520,12 @@ function ExpensesTab({
             setOpen(false);
             setEditing(null);
           }}
-          onSave={(e) => {
-            setExpenses((p) => {
-              const exists = p.some((x) => x.id === e.id);
-              return exists ? p.map((x) => (x.id === e.id ? e : x)) : [e, ...p];
-            });
-            setOpen(false);
-            setEditing(null);
+          onSave={async (e) => {
+            const saved = await onSave(e, Boolean(editing));
+            if (saved) {
+              setOpen(false);
+              setEditing(null);
+            }
           }}
         />
       )}
@@ -1547,7 +1540,7 @@ function ExpenseForm({
 }: {
   initial?: Expense | null;
   onClose: () => void;
-  onSave: (e: Expense) => void;
+  onSave: (e: Expense) => Promise<void>;
 }) {
   const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
   const [category, setCategory] = useState<ExpenseCategory>(initial?.category ?? "combustivel");
@@ -1559,10 +1552,10 @@ function ExpenseForm({
   return (
     <Modal onClose={onClose} title={initial ? "Editar despesa" : "Nova despesa"}>
       <form
-        onSubmit={(ev) => {
+        onSubmit={async (ev) => {
           ev.preventDefault();
           if (!valid) return;
-          onSave({
+          await onSave({
             id: initial?.id ?? uid(),
             amount: Number(amount),
             category,
