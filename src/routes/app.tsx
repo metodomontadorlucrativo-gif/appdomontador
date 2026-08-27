@@ -140,6 +140,22 @@ function AppDashboard() {
     const loadData = async () => {
       setDataLoading(true);
       setDataError(null);
+
+      // Migração única dos dados legados salvos no navegador.
+      if (hasLegacyData(user.id)) {
+        const toastId = toast.loading("Sincronizando seus dados...");
+        try {
+          const migrated = await migrateLegacyData(user.id);
+          const total = migrated.services + migrated.expenses + migrated.goals;
+          toast.success(
+            total > 0 ? `${total} registro(s) do seu dispositivo foram sincronizados.` : "Seus dados já estavam sincronizados.",
+            { id: toastId },
+          );
+        } catch {
+          toast.error("Não foi possível sincronizar os dados salvos neste dispositivo.", { id: toastId });
+        }
+      }
+
       const today = todayISO();
       const [servicesResult, expensesResult, goalsResult] = await Promise.all([
         supabase.from("services").select("*").order("scheduled_at", { ascending: false }),
