@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { hasLegacyData, migrateLegacyData } from "@/lib/legacy-migration";
 import {
   BarChart3,
   Briefcase,
