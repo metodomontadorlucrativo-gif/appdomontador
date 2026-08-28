@@ -243,11 +243,9 @@ async function runMigration(userId: string): Promise<MigrationResult> {
     }
   }
 
-  // Marca como concluída e limpa as chaves antigas deste dispositivo.
-  localStorage.setItem(doneKey(userId), new Date().toISOString());
-  localStorage.removeItem(LEGACY_SERVICES_KEY);
-  localStorage.removeItem(LEGACY_EXPENSES_KEY);
-  localStorage.removeItem(LEGACY_GOALS_KEY);
+  // Migração concluída: descarta o staging (a marca de "já migrado" já foi gravada).
+  localStorage.removeItem(stagingKey(userId));
+
 
   return result;
 }
