@@ -33,8 +33,17 @@ function dateOnly(value: unknown): string | null {
   return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
 }
 
+const stagingKey = (userId: string) => `trena.migrating.v1.${userId}`;
+
+type LegacyPayload = {
+  services: AnyRecord[];
+  expenses: AnyRecord[];
+  goals: AnyRecord | null;
+};
+
 export function hasLegacyData(userId: string): boolean {
   if (typeof window === "undefined") return false;
+  if (localStorage.getItem(stagingKey(userId))) return true; // tentativa anterior interrompida
   if (localStorage.getItem(doneKey(userId))) return false;
   return Boolean(
     localStorage.getItem(LEGACY_SERVICES_KEY) ||
@@ -46,16 +55,48 @@ export function hasLegacyData(userId: string): boolean {
 export type MigrationResult = { services: number; expenses: number; goals: number };
 
 /**
- * Migra o que existe no localStorage deste dispositivo, ignorando registros
- * que já existem no banco (assinatura por conteúdo) — seguro em vários dispositivos.
+ * Reivindica os dados legados de forma atômica: move as chaves antigas para uma
+ * chave de staging deste usuário e marca a migração como feita imediatamente.
+ * Assim, uma segunda execução (StrictMode, remontagem, novo login) não encontra
+ * mais nada para migrar e não há como duplicar registros.
  */
-export async function migrateLegacyData(userId: string): Promise<MigrationResult> {
+function claimLegacyPayload(userId: string): LegacyPayload {
+  const staged = readJSON<LegacyPayload>(stagingKey(userId));
+  if (staged) return staged;
+
+  const payload: LegacyPayload = {
+    services: readJSON<AnyRecord[]>(LEGACY_SERVICES_KEY) ?? [],
+    expenses: readJSON<AnyRecord[]>(LEGACY_EXPENSES_KEY) ?? [],
+    goals: readJSON<AnyRecord>(LEGACY_GOALS_KEY),
+  };
+  localStorage.setItem(stagingKey(userId), JSON.stringify(payload));
+  localStorage.setItem(doneKey(userId), new Date().toISOString());
+  localStorage.removeItem(LEGACY_SERVICES_KEY);
+  localStorage.removeItem(LEGACY_EXPENSES_KEY);
+  localStorage.removeItem(LEGACY_GOALS_KEY);
+  return payload;
+}
+
+// Impede que duas chamadas simultâneas (ex.: efeito disparado duas vezes) rodem em paralelo.
+const inFlight = new Map<string, Promise<MigrationResult>>();
+
+export function migrateLegacyData(userId: string): Promise<MigrationResult> {
+  const running = inFlight.get(userId);
+  if (running) return running;
+  const promise = runMigration(userId).finally(() => inFlight.delete(userId));
+  inFlight.set(userId, promise);
+  return promise;
+}
+
+async function runMigration(userId: string): Promise<MigrationResult> {
   const result: MigrationResult = { services: 0, expenses: 0, goals: 0 };
   if (typeof window === "undefined") return result;
 
-  const legacyServices = readJSON<AnyRecord[]>(LEGACY_SERVICES_KEY) ?? [];
-  const legacyExpenses = readJSON<AnyRecord[]>(LEGACY_EXPENSES_KEY) ?? [];
-  const legacyGoals = readJSON<AnyRecord>(LEGACY_GOALS_KEY);
+  const payload = claimLegacyPayload(userId);
+  const legacyServices = payload.services ?? [];
+  const legacyExpenses = payload.expenses ?? [];
+  const legacyGoals = payload.goals;
+
 
   /* ------------------------------ Serviços ------------------------------ */
   if (Array.isArray(legacyServices) && legacyServices.length > 0) {
