@@ -2,8 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, Lock } from "lucide-react";
+import { ArrowLeft, KeyRound, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { cancelSubscription, getSubscription } from "@/lib/billing.functions";
 import { Logo } from "./index";
 
@@ -200,8 +201,110 @@ function SubscriptionPage() {
             )}
           </div>
         )}
+
+        <PasswordChangeSection />
       </main>
     </div>
+  );
+}
+
+function PasswordChangeSection() {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (next.length < 6) {
+      toast.error("A nova senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (next !== confirm) {
+      toast.error("A confirmação não confere com a nova senha.");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.auth.updateUser({
+      password: next,
+      current_password: current,
+    });
+    setSaving(false);
+    if (error) {
+      toast.error(
+        error.message === "Current password required"
+          ? "Informe sua senha atual."
+          : "Não foi possível trocar a senha. Confira a senha atual e tente de novo.",
+      );
+      return;
+    }
+    toast.success("Senha alterada com sucesso!");
+    setCurrent("");
+    setNext("");
+    setConfirm("");
+  }
+
+  return (
+    <section className="mt-8 rounded-2xl border border-border bg-card p-6">
+      <h2 className="flex items-center gap-2 font-display text-lg font-bold">
+        <KeyRound className="size-5 text-brand" /> Alterar senha
+      </h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Troque sua senha temporária por uma senha sua, que só você conhece.
+      </p>
+      <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+        <div>
+          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Senha atual
+          </label>
+          <input
+            type="password"
+            required
+            autoComplete="current-password"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-brand"
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Nova senha
+            </label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              autoComplete="new-password"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-brand"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Confirmar nova senha
+            </label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-brand"
+            />
+          </div>
+        </div>
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+        >
+          {saving ? "Salvando..." : "Salvar nova senha"}
+        </button>
+      </form>
+    </section>
   );
 }
 
