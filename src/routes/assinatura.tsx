@@ -201,6 +201,8 @@ function SubscriptionPage() {
             )}
           </div>
         )}
+
+        <PasswordChangeSection />
       </main>
     </div>
   );
