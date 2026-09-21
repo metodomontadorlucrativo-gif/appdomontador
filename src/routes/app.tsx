@@ -1096,7 +1096,15 @@ function MiniCalendar({
               key={i}
               title={
                 info
-                  ? `${format(d, "dd/MM")} · ${formatBRL(info.total)}`
+                  ? `${format(d, "dd/MM")} · ${formatBRL(info.total)}${
+                      info.completedCount
+                        ? ` · ${info.completedCount} concluído${info.completedCount > 1 ? "s" : ""}`
+                        : ""
+                    }${
+                      info.scheduledCount
+                        ? ` · ${info.scheduledCount} agendado${info.scheduledCount > 1 ? "s" : ""}`
+                        : ""
+                    }`
                   : format(d, "dd/MM")
               }
               className={`relative aspect-square rounded-md p-1 text-[11px] ${
@@ -1109,12 +1117,22 @@ function MiniCalendar({
             >
               <div className="font-semibold">{format(d, "d")}</div>
               {info && (
-                <div className="absolute bottom-1 left-1 right-1 flex justify-end gap-0.5">
-                  {info.completed > 0 && (
-                    <span className="inline-block size-1.5 rounded-full bg-success" />
+                <div className="absolute bottom-0.5 left-0.5 right-0.5 flex items-center justify-between gap-0.5">
+                  {info.completedCount > 0 ? (
+                    <span className="flex items-center gap-px rounded-full bg-success/20 px-1 text-[9px] font-bold leading-[14px] text-success">
+                      <CheckCircle2 className="size-2" strokeWidth={3} />
+                      {info.completedCount}
+                    </span>
+                  ) : (
+                    <span />
                   )}
-                  {info.scheduled > 0 && (
-                    <span className="inline-block size-1.5 rounded-full bg-brand" />
+                  {info.scheduledCount > 0 ? (
+                    <span className="flex items-center gap-px rounded-full bg-brand/20 px-1 text-[9px] font-bold leading-[14px] text-brand">
+                      <Clock3 className="size-2" strokeWidth={3} />
+                      {info.scheduledCount}
+                    </span>
+                  ) : (
+                    <span />
                   )}
                 </div>
               )}
