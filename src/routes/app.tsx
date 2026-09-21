@@ -210,6 +210,10 @@ function AppDashboard() {
       status: service.status,
       scheduled_at: service.scheduled_at,
       period: service.period,
+      completed_at:
+        service.status === "completed"
+          ? (service.scheduled_at ?? new Date().toISOString())
+          : null,
     };
     const result = editing
       ? await supabase.from("services").update(payload).eq("id", service.id).select().single()
@@ -1442,6 +1446,7 @@ function ServiceForm({
   );
   const [date, setDate] = useState(initial?.date ?? todayISO());
   const [period, setPeriod] = useState<ServicePeriod>(initial?.period ?? "month");
+  const [status, setStatus] = useState<Service["status"]>(initial?.status ?? "scheduled");
 
   const valid = client.trim() && type.trim() && Number(price) > 0 && date;
   const isEdit = !!initial;
@@ -1457,8 +1462,9 @@ function ServiceForm({
             client_name: client.trim(),
             service_type: type.trim(),
             agreed_price: Number(price),
-            received_price: initial?.received_price ?? null,
-            status: initial?.status ?? "scheduled",
+            received_price:
+              status === "completed" ? (initial?.received_price ?? Number(price)) : null,
+            status,
             date,
             period,
             scheduled_at: new Date(date + "T08:00:00").toISOString(),
@@ -1521,6 +1527,24 @@ function ServiceForm({
             placeholder="0,00"
             className="input"
           />
+        </Field>
+        <Field label="Situação do serviço">
+          <div className="grid grid-cols-2 gap-1 rounded-md border border-border bg-card p-1 text-xs font-semibold">
+            {SERVICE_STATUSES.map((st) => (
+              <button
+                key={st.value}
+                type="button"
+                onClick={() => setStatus(st.value)}
+                className={`rounded px-2 py-1.5 transition-colors ${
+                  status === st.value
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
         </Field>
         <FormActions onCancel={onClose} disabled={!valid} />
       </form>
