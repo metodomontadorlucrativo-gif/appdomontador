@@ -1127,7 +1127,7 @@ function MiniCalendar({
                     <span />
                   )}
                   {info.scheduledCount > 0 ? (
-                    <span className="flex items-center gap-px rounded-full bg-brand/20 px-1 text-[9px] font-bold leading-[14px] text-brand">
+                    <span className="flex items-center gap-px rounded-full bg-surface px-1 text-[9px] font-bold leading-[14px] text-surface-foreground">
                       <Clock3 className="size-2" strokeWidth={3} />
                       {info.scheduledCount}
                     </span>
@@ -1145,7 +1145,7 @@ function MiniCalendar({
           <CheckCircle2 className="size-3 text-success" /> Concluído
         </span>
         <span className="flex items-center gap-1">
-          <Clock3 className="size-3 text-brand" /> Agendado
+          <Clock3 className="size-3 text-surface" /> Agendado
         </span>
       </div>
     </div>
