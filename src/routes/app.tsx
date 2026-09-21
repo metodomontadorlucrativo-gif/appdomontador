@@ -14,6 +14,7 @@ import {
   LogIn,
   LogOut,
   Target,
+  Clock3,
   Calendar as CalendarIcon,
   Pencil,
 } from "lucide-react";
