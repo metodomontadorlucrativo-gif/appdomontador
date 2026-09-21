@@ -1025,8 +1025,50 @@ function MiniCalendar({
   const weekdays = ["S", "T", "Q", "Q", "S", "S", "D"];
   const today = new Date();
 
+  // Ocupação da semana atual: % de dias já preenchidos com serviços
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  const filledDays = weekDays.filter((d) => {
+    const info = byDay.get(format(d, "yyyy-MM-dd"));
+    return info && info.total > 0;
+  }).length;
+  const weekPct = Math.round((filledDays / weekDays.length) * 100);
+  const isCurrentWeek = (d: Date) => isWithinInterval(d, { start: weekStart, end: weekEnd });
+
   return (
     <div>
+      {/* Destaque: serviços marcados na semana atual */}
+      <div className="mb-3 rounded-xl border border-brand/30 bg-brand/10 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span
+              className="flex size-8 items-center justify-center rounded-lg bg-brand/20 text-base"
+              role="img"
+              aria-label="agenda da semana"
+            >
+              📅
+            </span>
+            <div>
+              <div className="text-xs font-bold">Serviços desta semana</div>
+              <div className="text-[11px] text-muted-foreground">
+                {filledDays} de {weekDays.length} dias preenchidos
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="font-display text-xl font-bold text-brand">{weekPct}%</div>
+            <div className="text-[10px] font-semibold text-muted-foreground">ocupado</div>
+          </div>
+        </div>
+        <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-background">
+          <div
+            className="h-full rounded-full bg-brand transition-all"
+            style={{ width: `${weekPct}%` }}
+          />
+        </div>
+      </div>
+
       <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-muted-foreground">
         {weekdays.map((w, i) => (
           <div key={i}>{w}</div>
