@@ -1089,7 +1089,11 @@ function MiniCalendar({
                   : format(d, "dd/MM")
               }
               className={`relative aspect-square rounded-md p-1 text-[11px] ${
-                isToday ? "bg-brand/15 ring-1 ring-brand" : "bg-muted/30"
+                isToday
+                  ? "bg-brand/15 ring-2 ring-brand"
+                  : isCurrentWeek(d)
+                    ? "bg-brand/10 ring-1 ring-brand/40"
+                    : "bg-muted/30"
               }`}
             >
               <div className="font-semibold">{format(d, "d")}</div>
