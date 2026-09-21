@@ -210,6 +210,10 @@ function AppDashboard() {
       status: service.status,
       scheduled_at: service.scheduled_at,
       period: service.period,
+      completed_at:
+        service.status === "completed"
+          ? (service.scheduled_at ?? new Date().toISOString())
+          : null,
     };
     const result = editing
       ? await supabase.from("services").update(payload).eq("id", service.id).select().single()
@@ -1458,8 +1462,9 @@ function ServiceForm({
             client_name: client.trim(),
             service_type: type.trim(),
             agreed_price: Number(price),
-            received_price: initial?.received_price ?? null,
-            status: initial?.status ?? "scheduled",
+            received_price:
+              status === "completed" ? (initial?.received_price ?? Number(price)) : null,
+            status,
             date,
             period,
             scheduled_at: new Date(date + "T08:00:00").toISOString(),
