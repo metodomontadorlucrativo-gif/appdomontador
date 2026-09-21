@@ -1140,6 +1140,14 @@ function MiniCalendar({
           );
         })}
       </div>
+      <div className="mt-2 flex items-center justify-center gap-3 text-[10px] text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <CheckCircle2 className="size-3 text-success" /> Concluído
+        </span>
+        <span className="flex items-center gap-1">
+          <Clock3 className="size-3 text-brand" /> Agendado
+        </span>
+      </div>
     </div>
   );
 }
