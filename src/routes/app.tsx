@@ -1010,13 +1010,23 @@ function MiniCalendar({
   const cells: (Date | null)[] = [...Array(leadingBlanks).fill(null), ...days];
 
   const byDay = useMemo(() => {
-    const map = new Map<string, { completed: number; scheduled: number; total: number }>();
+    const map = new Map<
+      string,
+      { completed: number; scheduled: number; total: number; completedCount: number; scheduledCount: number }
+    >();
     for (const s of services) {
+      if (s.status !== "completed" && s.status !== "scheduled") continue; // cancelados nunca aparecem
       const d = format(serviceDate(s), "yyyy-MM-dd");
-      const cur = map.get(d) ?? { completed: 0, scheduled: 0, total: 0 };
+      const cur =
+        map.get(d) ?? { completed: 0, scheduled: 0, total: 0, completedCount: 0, scheduledCount: 0 };
       const price = servicePrice(s);
-      if (s.status === "completed") cur.completed += price;
-      else if (s.status === "scheduled") cur.scheduled += price;
+      if (s.status === "completed") {
+        cur.completed += price;
+        cur.completedCount += 1;
+      } else {
+        cur.scheduled += price;
+        cur.scheduledCount += 1;
+      }
       cur.total += price;
       map.set(d, cur);
     }
